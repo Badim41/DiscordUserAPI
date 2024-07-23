@@ -3,5 +3,5 @@ class DiscordUserException(Exception):
     """
 
 class SlashCommandException(DiscordUserException):
-    """Ошибка при выполнеии слэш-команды"""
+    """Ошибка при выполнении слэш-команды"""
 
