@@ -50,7 +50,7 @@ class ConnectionState:
 
         try:
             print(f"Connecting to {uri} with proxy {self._proxy_uri}" if self._proxy_uri else f"Connecting to {uri} without proxy")
-            async with session.ws_connect(uri, max_msg_size=2 ** 22) as websocket:
+            async with session.ws_connect(uri, max_msg_size=2 ** 30) as websocket:
                 print("Connected to websocket")
                 self.websocket = websocket
                 await self.identify()
