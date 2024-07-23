@@ -28,13 +28,14 @@ client = discord_user.Client(secret_token="КЛЮЧ АККАУНТА")
 ## Аргументы для создания <a name="section-2.2"></a>
 ```python
 import discord_user
-from discord_user import types
+from discord_user.types.presence import PresenceStatus
+from discord_user.types.device import ClientDevice
 
 client = discord_user.Client(
     secret_token="КЛЮЧ АККАУНТА",
     default_guild_ids=[int, None], # Фильтр гильдий. None - личные сообщения
-    status=types.ActiveStatus.ONLINE, # Статус (онлайн, офлайн ...)
-    device=types.ClientDevice.windows, # Устройство
+    status=PresenceStatus.ONLINE, # Статус (онлайн, офлайн ...)
+    device=ClientDevice.windows, # Устройство
     afk=False, # afk
     proxy_uri = None # proxy (рекомендовано SOCK5)
 )
