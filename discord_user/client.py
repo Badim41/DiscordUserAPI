@@ -15,7 +15,9 @@ from .types.message import DiscordMessage
 from .types.presence import PresenceStatus, Presence
 from .types.slash_command import SlashCommand, SlashCommandMessage
 
+
 _log = logging.getLogger(__name__)
+_log.setLevel(logging.DEBUG) # TODO CHANGE
 
 
 class Client:
@@ -105,14 +107,14 @@ class Client:
                     decompressed_data = zlib.decompress(data)
                     message = json.loads(decompressed_data.decode('utf-8'))
                 except zlib.error as e:
-                    print("Decompression error:", e)
+                    _log.warning("Decompression error:", e)
                     return
             elif isinstance(data, str):
                 message = json.loads(data)
             elif data is None:
                 raise Exception("data is NoneType")
             else:
-                print(f"Message {data} with type type: {type(data)} ignored")
+                _log.debug(f"Message {data} with type type: {type(data)} ignored")
                 return
 
             op = message.get('op')
@@ -123,6 +125,7 @@ class Client:
                 # print("message data:", event_data, event)
 
                 if event == 'READY':
+                    _log.log(msg=f"Уровень логирования: {_log.level}", level=_log.level)
                     for handler in self._on_start_handler:
                         self.info = SelfUserInfo(event_data)
                         await handler()
@@ -157,7 +160,7 @@ class Client:
                         await handler(event_data)
                 elif not event_code:
                     # Добавьте другие события, которые вам нужны
-                    print(f"Received unknown event: {event}", event_data)
+                    _log.debug(f"Received unknown event: {event}", event_data)
                 else:
                     # print(f"Event skip: {event}")
                     pass
@@ -166,9 +169,9 @@ class Client:
             elif op == 11:
                 pass  # Операция, подтверждающая отправленный heartbeat
             else:
-                print(f"Received operation: {op} with data: {message})")
+                _log.debug(f"Received operation: {op} with data: {message})")
         except Exception:
-            print("Пропущена необработанная ошибка:")
+            _log.warning("Пропущена необработанная ошибка:")
             traceback.print_exc()
 
     # ================== POST REQUESTS =========================

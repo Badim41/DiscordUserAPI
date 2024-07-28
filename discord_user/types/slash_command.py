@@ -5,7 +5,6 @@ from .interaction_metadata import InteractionMetadata
 from .user import User
 from ..utils.time_util import get_nonce
 
-
 class SlashCommand:
     def __init__(self, type, application_id, guild_id, channel_id, session_id, data: dict, analytics_location, options=None):
         self.type = type
@@ -25,10 +24,11 @@ class SlashCommand:
             "channel_id": self.channel_id,
             "session_id": self.session_id,
             "data": self.data,
-            "nonce": get_nonce(),
-            "analytics_location": self.analytics_location
+            "nonce": get_nonce()
         }
 
+        if self.analytics_location:
+            json_data['analytics_location'] = self.analytics_location
         if self.options:
             json_data['options'] = self.options
 
@@ -48,7 +48,7 @@ class SlashCommand:
             channel_id=json_data["channel_id"],
             session_id=session_id,
             data=json_data["data"],
-            analytics_location=json_data["analytics_location"],
+            analytics_location=json_data.get("analytics_location", None),
             options=json_data.get("options", None)
         )
 
@@ -136,7 +136,8 @@ class SlashCommandMessage:
     """
 
     def __init__(self, json_data):
-        print(f"slash data: {json_data}")
+        from ..client import _log
+        _log.info(f"slash data: {json_data}")
         self.webhook_id = json_data.get('webhook_id')
         self.type = json_data.get('type')
         self.tts = json_data.get('tts')
