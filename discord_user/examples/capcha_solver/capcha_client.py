@@ -3,7 +3,7 @@ import asyncio
 from discord_tools.timer import Time_Count
 
 import discord_user
-from discord_user import secret
+import secret
 from discord_user.types import EventType, DiscordMessage, ClientDevice
 from discord_user.types.slash_command import SlashCommand, SlashCommandMessage
 from ds_capcha.capcha_api import CapchaSolver
