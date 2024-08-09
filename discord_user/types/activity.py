@@ -62,6 +62,7 @@ class Activity:
         self.assets = assets
     @staticmethod
     def from_json(json_data):
+        print("Activity:", json_data)
         type = json_data.get('type')
         state = json_data.get('state')
         name = json_data.get('name')

@@ -6,7 +6,6 @@ from .sticker import Sticker
 
 class Guild:
     def __init__(self, json_data):
-        self.version = json_data['version']  # вообще не знаю что это
         self.threads = json_data['threads']  # TODO CLASS
         self.stickers = [Sticker(sticker_data) for sticker_data in json_data['stickers']]
         self.roles = [Role(role_data) for role_data in json_data['roles']]

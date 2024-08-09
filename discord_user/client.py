@@ -7,37 +7,29 @@ from typing import List
 import aiohttp
 
 from .connections import ConnectionState
-from .errors import SlashCommandException
+from .errors import DiscordRequestError
 from .types import SelfUserInfo
 from .types.device import ClientDevice
 from .types.event_type import get_event_code
 from .types.message import DiscordMessage
 from .types.presence import PresenceStatus, Presence
 from .types.slash_command import SlashCommand, SlashCommandMessage
-
-
-_log = logging.getLogger(__name__)
-_log.setLevel(logging.DEBUG) # TODO CHANGE
+from .global_logger import _log
+from .utils.time_util import get_nonce
 
 
 class Client:
     def __init__(
             self,
             secret_token,
-            default_guild_ids: list = None,
             status=PresenceStatus.ONLINE,
-            activity=None,
             device=ClientDevice.windows,
-            afk=False,
             proxy_uri: str = None
     ):
         """
         :param secret_token: Секретный ключ аккаунта (Bearer <SECRET KEY>)
-        :param default_guild_ids: Фильтр гильдий
         :param status: Статус (онлайн, офлайн, ...)
-        :param activity: Активность
         :param device: Устройство (телефон, браузер ...)
-        :param afk: bool, находится в AFK
         :param proxy_uri: str, SOCKS5 прокси
         """
         self._secret_token = secret_token
@@ -52,11 +44,10 @@ class Client:
         self._passive_update_v2_handlers = []
         self._voice_state_handlers = []
         self._connection: ConnectionState = None
-        self._default_guild_ids: List[int] = default_guild_ids or []
         self._status: str = status
-        self._activity = activity if activity else []
+        self._activity = []
         self._device = device
-        self._afk: bool = afk
+        self._afk: bool = False
         self._proxy_uri: str = proxy_uri
         self._session = aiohttp.ClientSession()
         self._session.proxies = {'http': self._proxy_uri, 'https': self._proxy_uri}
@@ -112,7 +103,9 @@ class Client:
             elif isinstance(data, str):
                 message = json.loads(data)
             elif data is None:
-                raise Exception("data is NoneType")
+                _log.warning("Reconnect to session...")
+                await self._connection.connect()
+                return
             else:
                 _log.debug(f"Message {data} with type type: {type(data)} ignored")
                 return
@@ -160,7 +153,7 @@ class Client:
                         await handler(event_data)
                 elif not event_code:
                     # Добавьте другие события, которые вам нужны
-                    _log.debug(f"Received unknown event: {event}", event_data)
+                    _log.debug(f"Received unknown event: {event}: {event_data}")
                 else:
                     # print(f"Event skip: {event}")
                     pass
@@ -175,22 +168,54 @@ class Client:
             traceback.print_exc()
 
     # ================== POST REQUESTS =========================
-    async def use_slash_command(self, slash_command: SlashCommand):
+    async def use_slash_command(self, slash_command: SlashCommand, force_multipart_form_data=False):
         url = 'https://discord.com/api/v9/interactions'
         headers = self._session.headers
-        headers['content-type'] = 'multipart/form-data; boundary=----WebKitFormBoundary2X3yiJ1GSW21psnT'
-
-        payload = f'------WebKitFormBoundary2X3yiJ1GSW21psnT\nContent-Disposition: form-data; name="payload_json"\n\n{slash_command.to_json()}\n------WebKitFormBoundary2X3yiJ1GSW21psnT--'
-
+        json_data = slash_command.to_json()
+        if json.loads(json_data).get("type", None) == 2 or force_multipart_form_data: # я не уверен, нужно ли вообще form_data
+            headers['content-type'] = 'multipart/form-data; boundary=----WebKitFormBoundary2X3yiJ1GSW21psnT'
+            payload = f'------WebKitFormBoundary2X3yiJ1GSW21psnT\nContent-Disposition: form-data; name="payload_json"\n\n{slash_command.to_json()}\n------WebKitFormBoundary2X3yiJ1GSW21psnT--'
+        else:
+            headers['content-type'] = 'application/json'
+            payload = json_data
         # print("payload", payload)
+        # print(f"SEND SLASH COMMAND: {json_data}")
 
-        async with self._session.post(url, headers=headers, data=payload.encode("utf-8")) as response:
+        async with self._session.post(url, headers=headers, data=payload) as response:
             if response.status != 204:
                 text = None
                 try:
                     text = await response.json()
                 except Exception:
                     pass
-                raise SlashCommandException(f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status}")
+                raise DiscordRequestError(f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status}")
 
-            print("interactions SUCCESS", await response.text())
+            # print("interactions SUCCESS", await response.text())
+    async def send_message(self, chat_id, text):
+        if not text:
+            raise Exception("message in empty")
+        url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
+
+        payload = {
+            "mobile_network_type": "unknown",
+            "content": text,
+            "nonce": get_nonce(),
+            "tts": False,
+            "flags": 0
+        }
+        headers = {
+            "authorization": self._secret_token
+        }
+
+        async with self._session.post(url, headers=headers, json=payload) as response:
+            if response.status == 200:
+                text = None
+                try:
+                    text = await response.json()
+                    return text
+                except Exception:
+                    pass
+                raise DiscordRequestError(
+                    f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status}")
+            else:
+                raise DiscordRequestError(f"Ошибка при отправке сообщения. Статус ошибки: {response.status}: {await response.text()}")

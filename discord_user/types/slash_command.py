@@ -1,12 +1,15 @@
 import json
+import logging
 
 from .embed import Embed
 from .interaction_metadata import InteractionMetadata
 from .user import User
 from ..utils.time_util import get_nonce
+from ..global_logger import _log
+
 
 class SlashCommand:
-    def __init__(self, type, application_id, guild_id, channel_id, session_id, data: dict, analytics_location, options=None):
+    def __init__(self, type, application_id, guild_id, channel_id, session_id, data: dict, analytics_location, options=None, message_flags=None, message_id=None):
         self.type = type
         self.application_id = application_id
         self.guild_id = guild_id
@@ -15,6 +18,8 @@ class SlashCommand:
         self.data = data
         self.analytics_location = analytics_location
         self.options = options
+        self.message_flags = message_flags
+        self.message_id = message_id
 
     def to_json(self):
         json_data = {
@@ -31,12 +36,16 @@ class SlashCommand:
             json_data['analytics_location'] = self.analytics_location
         if self.options:
             json_data['options'] = self.options
+        if self.message_flags:
+            json_data['message_flags'] = self.message_flags
+        if self.message_id:
+            json_data['message_id'] = self.message_id
 
         return json.dumps(json_data)
 
     @classmethod
     def from_dict(cls, json_data, session_id):
-        required_fields = ["type", "application_id", "guild_id", "channel_id", "data", "analytics_location"]
+        required_fields = ["type", "application_id", "guild_id", "channel_id", "data"]
         for field in required_fields:
             if field not in json_data:
                 raise ValueError(f"Missing required field: {field}")
@@ -49,7 +58,9 @@ class SlashCommand:
             session_id=session_id,
             data=json_data["data"],
             analytics_location=json_data.get("analytics_location", None),
-            options=json_data.get("options", None)
+            options=json_data.get("options", None),
+            message_flags=json_data.get("message_flags", None),
+            message_id=json_data.get("message_id", None)
         )
 
 
@@ -136,8 +147,7 @@ class SlashCommandMessage:
     """
 
     def __init__(self, json_data):
-        from ..client import _log
-        _log.info(f"slash data: {json_data}")
+        _log.log(msg=f"slash data: {json_data}",level=logging.DEBUG)
         self.webhook_id = json_data.get('webhook_id')
         self.type = json_data.get('type')
         self.tts = json_data.get('tts')

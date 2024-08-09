@@ -1,7 +1,9 @@
 class EventType:
     # Только для пользователя
-    RELATIONSHIP_ADD = -7 # добавление в друзья
-    RELATIONSHIP_REMOVE = -6 # удаление из друзей
+    INTERACTION_CREATE = -9  # создание слэш-команды
+    INTERACTION_SUCCESS = -8  # успешная слэш-команда
+    RELATIONSHIP_ADD = -7  # добавление в друзья
+    RELATIONSHIP_REMOVE = -6  # удаление из друзей
     MESSAGE_REACTION_REMOVE = -5
     MESSAGE_REACTION_ADD = -4
     PRESENCE_UPDATE = -3
@@ -89,7 +91,9 @@ class EventType:
 
 def get_event_code(event_name):
     event_mapping = {
-        'RELATIONSHIP_ADD': EventType.RELATIONSHIP_ADD, # type 3 - входящие, 4 - отправленные, 1 - принятый
+        'INTERACTION_CREATE': EventType.INTERACTION_CREATE,
+        'INTERACTION_SUCCESS': EventType.INTERACTION_SUCCESS,
+        'RELATIONSHIP_ADD': EventType.RELATIONSHIP_ADD,  # type 3 - входящие, 4 - отправленные, 1 - принятый
         'RELATIONSHIP_REMOVE': EventType.RELATIONSHIP_REMOVE,
         'MESSAGE_REACTION_REMOVE': EventType.MESSAGE_REACTION_REMOVE,
         'MESSAGE_REACTION_ADD': EventType.MESSAGE_REACTION_ADD,

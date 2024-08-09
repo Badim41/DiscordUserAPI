@@ -22,6 +22,8 @@ class User:
 
 class SelfUserInfo:
     def __init__(self, json_data):
+        with open("user_info.json", "w", encoding="utf-8") as writer:
+            writer.write(str(json_data))
         self.local_message_users = [User(user_data) for user_data in json_data['users']]
         self.user_guild_settings = json_data['user_guild_settings']
         self_user = json_data['user']
