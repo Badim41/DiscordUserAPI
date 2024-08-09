@@ -6,13 +6,13 @@ import aiohttp
 
 from .connections import ConnectionState
 from .errors import DiscordRequestError
-from .types import SelfUserInfo
+from .global_logger import _log
+from .types import SelfUserInfo, Activity
 from .types.device import ClientDevice
 from .types.event_type import get_event_code
 from .types.message import DiscordMessage
 from .types.presence import PresenceStatus, Presence
 from .types.slash_command import SlashCommand, SlashCommandMessage
-from .global_logger import _log
 from .utils.time_util import get_nonce
 
 
@@ -170,7 +170,8 @@ class Client:
         url = 'https://discord.com/api/v9/interactions'
         headers = self._session.headers
         json_data = slash_command.to_json()
-        if json.loads(json_data).get("type", None) == 2 or force_multipart_form_data: # я не уверен, нужно ли вообще form_data
+        if json.loads(json_data).get("type",
+                                     None) == 2 or force_multipart_form_data:  # я не уверен, нужно ли вообще form_data
             headers['content-type'] = 'multipart/form-data; boundary=----WebKitFormBoundary2X3yiJ1GSW21psnT'
             payload = f'------WebKitFormBoundary2X3yiJ1GSW21psnT\nContent-Disposition: form-data; name="payload_json"\n\n{slash_command.to_json()}\n------WebKitFormBoundary2X3yiJ1GSW21psnT--'
         else:
@@ -189,6 +190,7 @@ class Client:
                 raise DiscordRequestError(f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status}")
 
             # print("interactions SUCCESS", await response.text())
+
     async def send_message(self, chat_id, text):
         if not text:
             raise Exception("message in empty")
@@ -216,4 +218,20 @@ class Client:
                 raise DiscordRequestError(
                     f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status}")
             else:
-                raise DiscordRequestError(f"Ошибка при отправке сообщения. Статус ошибки: {response.status}: {await response.text()}")
+                raise DiscordRequestError(
+                    f"Ошибка при отправке сообщения. Статус ошибки: {response.status}: {await response.text()}")
+
+    async def change_activity(self, activity: Activity, status:str):
+        if status not in PresenceStatus.status_list:
+            raise TypeError(f"status должен быть одним из {PresenceStatus.status_list}")
+        activity_json = {
+            "op": 3,
+            "d": {
+                "status": status,
+                "since": 0,
+                "activities": [activity.to_dict()],
+                "afk": False
+            }
+        }
+        print("set activity:", activity.to_dict())
+        await self._connection.websocket.send_json(activity_json)

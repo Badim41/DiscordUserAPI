@@ -6,6 +6,7 @@ class PresenceStatus:
     IDLE = "idle"  # Неактивен
     DND = "dnd"  # Не беспокоить
     INVISIBLE = "invisible"  # невидимый
+    status_list = ["online", "idle", "dnd", "invisible"]
 
 class Game:
     def __init__(self, json_data):

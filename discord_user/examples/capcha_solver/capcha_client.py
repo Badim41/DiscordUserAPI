@@ -4,7 +4,7 @@ from discord_tools.timer import Time_Count
 
 import discord_user
 import secret
-from discord_user.types import EventType, DiscordMessage, ClientDevice
+from discord_user.types import EventType, DiscordMessage, ClientDevice, Activity
 from discord_user.types.slash_command import SlashCommand, SlashCommandMessage
 from ds_capcha.capcha_api import CapchaSolver
 
@@ -84,6 +84,21 @@ async def on_start():
         await client.use_slash_command(command_3)
 
     print("Пользователь запущен!")
+
+    json_data = {
+        'id': 'ed52e7003b57bc8',
+        'created_at': 1723184107714,
+        'name': 'Решает капчи',
+        'type': 0,
+        'assets': {
+            'large_image': 'mp:emojis/1212496120660365444.webp?format=webp&width=60&height=60'
+        }
+    }
+    activity = Activity.from_json(json_data)
+
+    # Установка активности пользователя
+    await client.change_activity(activity=activity, status="online")
+
     asyncio.ensure_future(send_command())
 
 @client.slash_command_handler

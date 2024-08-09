@@ -16,3 +16,7 @@ def convert_timestamp_to_readable_time(timestamp_ms):
 
 def get_nonce() -> str:
     return str(int(time.time() * 734282690.97))
+
+
+if __name__ == '__main__':
+    print(datetime.datetime.fromtimestamp(1723204800).strftime("%Y-%m-%d"))

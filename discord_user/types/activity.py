@@ -45,13 +45,17 @@ class Activity:
         "join": "025ed05c71f639de8bfaa0d679d7c94b2fdce12f"
       }
     }
+
+    {"name": "Custom Status", "type": 4, "state": "хых", "timestamps": {"end": 1723204799999}, "emoji": null}
     """
 
     """
     Пример:
     
     """
-    def __init__(self, id, details, state, name, type:int, url, assets, created_at=datetime.datetime.now()):
+
+    def __init__(self, state: str, name: str, type: int, id=None, details=None, url=None, assets=None, created_at=None,
+                 timestamps=None, secrets=None):
         self.id = id
         self.created_at = created_at
         self.details = details
@@ -60,9 +64,12 @@ class Activity:
         self.type = type
         self.url = url
         self.assets = assets
+        self.timestamps = timestamps
+        self.secrets = secrets
+
     @staticmethod
     def from_json(json_data):
-        print("Activity:", json_data)
+        # print("Activity:", json_data)
         type = json_data.get('type')
         state = json_data.get('state')
         name = json_data.get('name')
@@ -71,7 +78,10 @@ class Activity:
         details = json_data.get('details')
         url = json_data.get('url')
         assets = json_data.get('assets')
-        return Activity(id=id, details=details, state=state, name=name, type=type, url=url, assets=assets, created_at=created_at)
+        secrets = json_data.get('secrets')
+        timestamps = json_data.get('timestamps')
+        return Activity(id=id, details=details, state=state, name=name, type=type, url=url, assets=assets,
+                        created_at=created_at, secrets=secrets, timestamps=timestamps)
 
     def to_dict(self):
         data = {}
@@ -91,6 +101,10 @@ class Activity:
             data['url'] = self.url
         if self.assets is not None:
             data['assets'] = self.assets
+        if self.secrets is not None:
+            data['secrets'] = self.secrets
+        if self.timestamps is not None:
+            data['timestamps'] = self.timestamps
         return data
 
 
@@ -123,4 +137,69 @@ class ActivityType:
     # пример: "Chilling"
     HANG = 6
 
-# activity = Activity()
+
+class CustomStatus(Activity):
+    """
+    {"name": "Custom Status", "type": 4, "state": "хых", "timestamps": {"end": 1723204799999}, "emoji": null}
+    """
+
+    def __init__(
+            self,
+            state: str,
+            end: int = None
+    ):
+        """
+        state - текст статуса
+        end - timestamp когда закончится
+        """
+        name = "Custom Status"
+        type = 4
+        state = state
+
+        if end:
+            timestamps = {"end": end}
+        else:
+            timestamps = None
+
+        details = None
+        id = None
+        url = None
+        assets = None
+        secrets = None
+        created_at = None
+
+        # Инициализируем Activity с помощью родительского конструктора
+        super().__init__(id=id, details=details, state=state, name=name, type=type, url=url, assets=assets,
+                         created_at=created_at, secrets=secrets, timestamps=timestamps)
+
+
+class SimpleStatus(Activity):
+    """
+    {'type': 0, 'timestamps': {'start': 1723180000704}, 'name': 'Точно НЕ взламывает Пинтагон',
+         'id': 'ed52e7003b57bc8', 'created_at': 1723180002204}
+    """
+
+    def __init__(
+            self,
+            name: str,
+            id: str,
+            type: int,
+            start=datetime.datetime.now(),
+            details=None,
+            url=None,
+            assets=None,
+            secrets=None,
+            created_at=datetime.datetime.now(),
+            state=None
+    ):
+        name = name
+        id = id
+
+        if start:
+            timestamps = {"start": start}
+        else:
+            timestamps = None
+
+        # Инициализируем Activity с помощью родительского конструктора
+        super().__init__(id=id, details=details, state=state, name=name, type=type, url=url, assets=assets,
+                         created_at=created_at, secrets=secrets, timestamps=timestamps)
