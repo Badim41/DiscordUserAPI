@@ -55,7 +55,7 @@ class Activity:
     """
 
     def __init__(self, state: str, name: str, type: int, id=None, details=None, url=None, assets=None, created_at=None,
-                 timestamps=None, secrets=None):
+                 timestamps=None, secrets=None, emoji=None):
         self.id = id
         self.created_at = created_at
         self.details = details
@@ -66,6 +66,7 @@ class Activity:
         self.assets = assets
         self.timestamps = timestamps
         self.secrets = secrets
+        self.emoji = emoji
 
     @staticmethod
     def from_json(json_data):
@@ -105,6 +106,9 @@ class Activity:
             data['secrets'] = self.secrets
         if self.timestamps is not None:
             data['timestamps'] = self.timestamps
+        if self.emoji is not None:
+            data['emoji'] = self.emoji
+
         return data
 
 
@@ -146,7 +150,8 @@ class CustomStatus(Activity):
     def __init__(
             self,
             state: str,
-            end: int = None
+            end: int = None,
+            emoji:str=None,
     ):
         """
         state - текст статуса
@@ -154,7 +159,6 @@ class CustomStatus(Activity):
         """
         name = "Custom Status"
         type = 4
-        state = state
 
         if end:
             timestamps = {"end": end}
@@ -170,7 +174,7 @@ class CustomStatus(Activity):
 
         # Инициализируем Activity с помощью родительского конструктора
         super().__init__(id=id, details=details, state=state, name=name, type=type, url=url, assets=assets,
-                         created_at=created_at, secrets=secrets, timestamps=timestamps)
+                         created_at=created_at, secrets=secrets, timestamps=timestamps, emoji=emoji)
 
 
 class SimpleStatus(Activity):
@@ -184,7 +188,7 @@ class SimpleStatus(Activity):
             name: str,
             id: str,
             type: int,
-            start=datetime.datetime.now(),
+            start=int(datetime.datetime.now().timestamp()),
             details=None,
             url=None,
             assets=None,
@@ -203,3 +207,13 @@ class SimpleStatus(Activity):
         # Инициализируем Activity с помощью родительского конструктора
         super().__init__(id=id, details=details, state=state, name=name, type=type, url=url, assets=assets,
                          created_at=created_at, secrets=secrets, timestamps=timestamps)
+
+class NoActivity(Activity):
+    def __init__(self):
+        super().__init__(state="", name="", type=0)
+        self.state = None
+        self.name = None
+        self.type = None
+
+    def to_dict(self):
+        return []

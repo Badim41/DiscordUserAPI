@@ -8,6 +8,8 @@ setup(
         'requests==2.31.0',
         'websockets',
         'aiohttp',
-        'aiohttp-socks'
+        'aiohttp-socks',
+        'pydub',
+        'aiofiles'
     ],
 )

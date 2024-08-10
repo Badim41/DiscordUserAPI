@@ -1,7 +1,10 @@
 import json
+import os
 import traceback
+import wave
 import zlib
 
+import aiofiles
 import aiohttp
 
 from .connections import ConnectionState
@@ -13,6 +16,9 @@ from .types.event_type import get_event_code
 from .types.message import DiscordMessage
 from .types.presence import PresenceStatus, Presence
 from .types.slash_command import SlashCommand, SlashCommandMessage
+from .utils.audio_utils import *
+from .utils.ds_base64 import *
+from .utils.mimetype_util import get_mimetype
 from .utils.time_util import get_nonce
 
 
@@ -71,6 +77,10 @@ class Client:
 
     def message_handler(self, func):
         self._message_handlers.append(func)
+        return func
+
+    def voice_status_handler(self, func):
+        self._voice_state_handlers.append(func)
         return func
 
     def slash_command_handler(self, func):
@@ -165,6 +175,70 @@ class Client:
             _log.warning("Пропущена необработанная ошибка:")
             traceback.print_exc()
 
+    # ================== attachments =========================
+    async def _get_upload_url(self, channel_id, file_path):
+        url = f"https://discord.com/api/v9/channels/{channel_id}/attachments"
+
+        files = [
+            {
+                "filename": os.path.basename(file_path),
+                "file_size": os.path.getsize(file_path)}
+        ]
+
+        payload = {
+            "files": files
+        }
+
+        headers = {
+            "Authorization": self._secret_token
+        }
+
+        async with self._session.post(url, headers=headers, json=payload) as response:
+            if response.status == 200:
+                try:
+                    response_json = await response.json()
+                    return response_json
+                except Exception:
+                    raise DiscordRequestError(
+                        f"Ошибка при получении ссылки. Код ошибки: {response.status}"
+                    )
+            else:
+                response_text = await response.text()
+                raise DiscordRequestError(
+                    f"Ошибка при получении ссылки. Статус ошибки: {response.status}: {response_text}"
+                )
+
+    async def _create_attachment(self, channel_id, file_path, mimetype=None):
+        filename = os.path.basename(file_path)
+        form_data = aiohttp.FormData()
+
+        # Чтение аудиофайла для отправки
+        if not mimetype:
+            mimetype = get_mimetype(file_path)
+            print("mimetype", mimetype)
+
+        async with aiofiles.open(file_path, 'rb') as f:
+            audio_data = await f.read()
+            form_data.add_field('file', audio_data, filename=filename, content_type=mimetype)
+
+        headers = {
+            "authorization": self._secret_token
+        }
+
+        json_data_upload = await self._get_upload_url(channel_id=channel_id, file_path=file_path)
+        upload_url = json_data_upload['attachments'][0]['upload_url']
+
+        async with self._session.put(upload_url, headers=headers, data=form_data) as response:
+            if response.status == 200:
+                try:
+                    await response.text()
+                    return json_data_upload
+                except Exception as e:
+                    raise DiscordRequestError(f"Ошибка при обработке ответа: {e}")
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при отправке аудио. Статус ошибки: {response.status}: {await response.text()}")
+
     # ================== POST REQUESTS =========================
     async def use_slash_command(self, slash_command: SlashCommand, force_multipart_form_data=False):
         url = 'https://discord.com/api/v9/interactions'
@@ -191,37 +265,7 @@ class Client:
 
             # print("interactions SUCCESS", await response.text())
 
-    async def send_message(self, chat_id, text):
-        if not text:
-            raise Exception("message in empty")
-        url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
-
-        payload = {
-            "mobile_network_type": "unknown",
-            "content": text,
-            "nonce": get_nonce(),
-            "tts": False,
-            "flags": 0
-        }
-        headers = {
-            "authorization": self._secret_token
-        }
-
-        async with self._session.post(url, headers=headers, json=payload) as response:
-            if response.status == 200:
-                text = None
-                try:
-                    text = await response.json()
-                    return text
-                except Exception:
-                    pass
-                raise DiscordRequestError(
-                    f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status}")
-            else:
-                raise DiscordRequestError(
-                    f"Ошибка при отправке сообщения. Статус ошибки: {response.status}: {await response.text()}")
-
-    async def change_activity(self, activity: Activity, status:str):
+    async def change_activity(self, activity: Activity, status: str):
         if status not in PresenceStatus.status_list:
             raise TypeError(f"status должен быть одним из {PresenceStatus.status_list}")
         activity_json = {
@@ -235,3 +279,72 @@ class Client:
         }
         print("set activity:", activity.to_dict())
         await self._connection.websocket.send_json(activity_json)
+
+    async def send_voice(self, chat_id, audio_path):
+        url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
+
+        # Получение продолжительности аудио в секундах и формирование waveform
+        duration_secs = get_audio_duration(audio_path)
+        waveform_data = generate_waveform(audio_path)
+
+        # print("waveform_data", waveform_data)
+        # print("duration_secs", duration_secs)
+
+        attachments_json_data = await self._create_attachment(channel_id=chat_id, file_path=audio_path)
+        uploaded_filename = attachments_json_data['attachments'][0]['upload_filename']
+        # Формирование данных для отправки
+        payload = {
+            "nonce": get_nonce(),
+            "type": 0,
+            "flags": 8192,
+            "attachments": [{
+                "id": "0",
+                "filename": "voice-message.mp3",
+                "uploaded_filename": uploaded_filename,
+                "duration_secs": duration_secs,
+                "waveform": waveform_data
+            }]
+        }
+
+        headers = {
+            "authorization": self._secret_token
+        }
+
+        async with self._session.post(url, headers=headers, json=payload) as response:
+            if response.status == 200:
+                try:
+                    return await response.json()
+                except Exception as e:
+                    raise DiscordRequestError(f"Ошибка при обработке ответа: {e}")
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при отправке аудио. Статус ошибки: {response.status}: {await response.text()}")
+
+    async def send_message(self, chat_id, text):
+        url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
+
+        payload = {
+            "mobile_network_type": "unknown",
+            "type": 0,
+            "content": text,
+            "nonce": get_nonce(),
+            "tts": False,
+            "flags": 0
+        }
+        headers = {
+            "authorization": self._secret_token
+        }
+
+        async with self._session.post(url, headers=headers, json=payload) as response:
+            if response.status == 200:
+                response_text = None
+                try:
+                    response_text = await response.json()
+                    return response_text
+                except Exception:
+                    pass
+                raise DiscordRequestError(
+                    f"Ошибка при отправке сообщения: {response_text}. Код ошибки: {response.status}")
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при отправке сообщения. Статус ошибки: {response.status}: {await response.text()}")

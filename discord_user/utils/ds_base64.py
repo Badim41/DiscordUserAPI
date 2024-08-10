@@ -1,5 +1,6 @@
 import base64
 
+
 def encode_base64(input_string: str) -> str:
     # Преобразуем строку в байты
     bytes_input = input_string.encode('utf-8')
@@ -17,3 +18,4 @@ def decode_base64(encoded_string: str) -> str:
     # Преобразуем результат в строку
     output_string = bytes_output.decode('utf-8')
     return output_string
+

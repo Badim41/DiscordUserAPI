@@ -24,7 +24,7 @@ class SelfUserInfo:
     def __init__(self, json_data):
         with open("user_info.json", "w", encoding="utf-8") as writer:
             writer.write(str(json_data))
-        self.local_message_users = [User(user_data) for user_data in json_data['users']]
+        self.local_message_users = {user_data['id']: User(user_data) for user_data in json_data['users']}
         self.user_guild_settings = json_data['user_guild_settings']
         self_user = json_data['user']
         self.is_verified: bool = self_user['verified']
@@ -33,8 +33,10 @@ class SelfUserInfo:
         self.phone: str = self_user['phone']
         self.email: str = self_user['email']
         self.global_name: str = self_user['global_name']
+        self.relationships = json_data['relationships']
         self.friends_id: List[str] = []
-        for relationship_data in json_data['relationships']:
+
+        for relationship_data in self.relationships:
             if relationship_data['type'] == 1:
                 self.friends_id.append(relationship_data['id'])
 
@@ -64,6 +66,6 @@ class SelfUserInfo:
             
         ]
         """
-        self.guilds = [Guild(guild_data) for guild_data in json_data['guilds']]
+        self.guilds = {guild_data['id']: Guild(guild_data) for guild_data in json_data['guilds']}
         self.regions: List[str] = json_data['geo_ordered_rtc_regions']
         self.session_id = json_data['session_id']
