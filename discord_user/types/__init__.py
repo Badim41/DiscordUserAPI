@@ -4,8 +4,12 @@ from .device import *
 from .emoji import *
 from .event_type import *
 from .guild import *
+from .interaction_metadata import *
 from .message import *
+from .permissions import  *
 from .presence import *
 from .role import *
+from .sticker import *
+from .slash_command import *
 from .sticker import *
 from .user import *

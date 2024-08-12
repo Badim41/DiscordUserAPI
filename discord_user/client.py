@@ -28,6 +28,7 @@ class Client:
             secret_token,
             status=PresenceStatus.ONLINE,
             device=ClientDevice.windows,
+            afk=False,
             proxy_uri: str = None
     ):
         """
@@ -51,7 +52,7 @@ class Client:
         self._status: str = status
         self._activity = []
         self._device = device
-        self._afk: bool = False
+        self._afk: bool = afk
         self._proxy_uri: str = proxy_uri
         self._session = aiohttp.ClientSession()
         self._session.proxies = {'http': self._proxy_uri, 'https': self._proxy_uri}

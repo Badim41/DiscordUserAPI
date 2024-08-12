@@ -1,10 +1,11 @@
 import asyncio
+import datetime
 
 from discord_tools.timer import Time_Count
 
 import discord_user
 import secret
-from discord_user.types import EventType, DiscordMessage, ClientDevice, Activity
+from discord_user.types import EventType, DiscordMessage, ClientDevice, Activity, ActivityType
 from discord_user.types.slash_command import SlashCommand, SlashCommandMessage
 from ds_capcha.capcha_api import CapchaSolver
 
@@ -85,15 +86,37 @@ async def on_start():
 
     print("Пользователь запущен!")
 
+    # json_data = {
+    #     'id': 'ed52e7003b57bc8',
+    #     'created_at': 1723184107714,
+    #     'name': 'Решает капчи',
+    #     'type': 0,
+    #     'assets': {
+    #         'large_image': 'mp:emojis/1212496120660365444.webp?format=webp&width=60&height=60'
+    #     }
+    # }
+    #
+    # json_data = {
+    #     'id': 'ed52e7003b57bc8',
+    #     'created_at': 1723184107714,
+    #     'name': 'Охота на Peely!',
+    #     'type': 0,
+    #     'assets': {
+    #         'large_image': 'mp:avatars/604235444305133568/ada94027a8cd4bf23c7a30a6fef880bc.webp?size=80'
+    #     },
+    #     "timestamps":{"start":int(datetime.datetime.now().timestamp())}
+    # }
+
     json_data = {
         'id': 'ed52e7003b57bc8',
         'created_at': 1723184107714,
-        'name': 'Решает капчи',
-        'type': 0,
+        'name': 'глаженье Peely',
+        'type': ActivityType.COMPETING,
         'assets': {
-            'large_image': 'mp:emojis/1212496120660365444.webp?format=webp&width=60&height=60'
+            'large_image': 'mp:attachments/1210741539345534997/1262000096057229393/bc135601-bc4e-4a2c-a661-18ddb9711fa5.gif?ex=66b941ed&is=66b7f06d&hm=4233455dd270395a27caa61c8bd1675fe9b05da9335975efe362f30b2fd621a8&'
         }
     }
+
     activity = Activity.from_json(json_data)
 
     # Установка активности пользователя
