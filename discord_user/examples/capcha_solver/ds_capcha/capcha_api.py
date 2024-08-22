@@ -7,7 +7,7 @@ import requests
 from PIL import Image
 
 # private library with ChatGPT. Use your methods
-from discord_tools.chat_gpt_ai_api import ChatGPT_4_Account
+from discord_tools.chat_hub_api import ChatHubAPI
 from discord_tools.describe_image import describe_image, Describers_API
 from discord_tools.reka_API import Reka_API
 from discord_tools.str_tools import convert_answer_to_json
@@ -41,7 +41,7 @@ class CapchaSolver:
         """
         self.proxies = proxies
         self.reka_api = Reka_API(app_session_reka, proxies=self.proxies)
-        self.account = ChatGPT_4_Account()
+        self.account = ChatHubAPI()
 
     @staticmethod
     def download_capcha(image_url, image_path):
@@ -65,13 +65,13 @@ class CapchaSolver:
                                           reka_api=self.reka_api)
         else:
             # Открываем изображения
-            image1 = Image.open(f'{BASE_PATH}/fake_image.png')
-            image2 = Image.open(capcha_path)
-
-            combined_capcha = f'temp_images/result_{random_factor}.png'
-            image2_resized = image2.resize((290, 150))
-            image1.paste(image2_resized, (743, 795))
-            image1.save(combined_capcha)
+            # image1 = Image.open(f'{BASE_PATH}/fake_image.png')
+            # image2 = Image.open(capcha_path)
+            #
+            # combined_capcha = f'temp_images/result_{random_factor}.png'
+            # image2_resized = image2.resize((290, 150))
+            # image1.paste(image2_resized, (743, 795))
+            # image1.save(combined_capcha)
             print("capcha API: ChatGPT4")
             nsfw, answer = describe_image(image_path=capcha_path, prompt=prompt,
                                           describers=[Describers_API.ChatGPT4])

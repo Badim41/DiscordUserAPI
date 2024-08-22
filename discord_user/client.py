@@ -147,12 +147,6 @@ class Client:
                 elif event == 'VOICE_STATE_UPDATE':
                     for handler in self._voice_state_handlers:
                         await handler(event_data)
-                elif event == 'PASSIVE_UPDATE_V2':
-                    for handler in self._passive_update_v2_handlers:
-                        await handler(event_data)
-                elif event == 'SESSIONS_REPLACE':
-                    for handler in self._session_replace_handlers:
-                        await handler(event_data)
                 elif event == 'PRESENCE_UPDATE':
                     for handler in self._status_update_handlers:
                         activity = Presence(event_data)
@@ -335,6 +329,8 @@ class Client:
         headers = {
             "authorization": self._secret_token
         }
+
+        _log.debug(f"payload send_message: {payload}")
 
         async with self._session.post(url, headers=headers, json=payload) as response:
             if response.status == 200:

@@ -1,5 +1,14 @@
 class EventType:
     # Только для пользователя
+    INTERACTION_MODAL_CREATE = -18
+    PASSIVE_UPDATE_V2 = -17  # пассивное обновление
+    SESSIONS_REPLACE = -16  # обновление сессии
+    USER_SETTINGS_PROTO_UPDATE = -15
+    VOICE_CHANNEL_STATUS_UPDATE = -14
+    CONTENT_INVENTORY_INBOX_STALE = -13
+    GUILD_MEMBER_UPDATE = -12
+    CONVERSATION_SUMMARY_UPDATE = -11
+    MESSAGE_ACK = -10
     INTERACTION_CREATE = -9  # создание слэш-команды
     INTERACTION_SUCCESS = -8  # успешная слэш-команда
     RELATIONSHIP_ADD = -7  # добавление в друзья
@@ -91,6 +100,15 @@ class EventType:
 
 def get_event_code(event_name):
     event_mapping = {
+        'INTERACTION_MODAL_CREATE': EventType.INTERACTION_MODAL_CREATE,
+        'PASSIVE_UPDATE_V2': EventType.PASSIVE_UPDATE_V2,
+        'SESSIONS_REPLACE': EventType.SESSIONS_REPLACE,
+        'USER_SETTINGS_PROTO_UPDATE': EventType.USER_SETTINGS_PROTO_UPDATE,
+        'VOICE_CHANNEL_STATUS_UPDATE': EventType.VOICE_CHANNEL_STATUS_UPDATE,
+        'CONTENT_INVENTORY_INBOX_STALE': EventType.CONTENT_INVENTORY_INBOX_STALE,
+        'GUILD_MEMBER_UPDATE': EventType.GUILD_MEMBER_UPDATE,
+        'CONVERSATION_SUMMARY_UPDATE': EventType.CONVERSATION_SUMMARY_UPDATE,
+        'MESSAGE_ACK': EventType.MESSAGE_ACK,
         'INTERACTION_CREATE': EventType.INTERACTION_CREATE,
         'INTERACTION_SUCCESS': EventType.INTERACTION_SUCCESS,
         'RELATIONSHIP_ADD': EventType.RELATIONSHIP_ADD,  # type 3 - входящие, 4 - отправленные, 1 - принятый

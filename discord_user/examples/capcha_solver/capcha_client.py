@@ -1,5 +1,6 @@
 import asyncio
 import datetime
+import logging
 
 from discord_tools.timer import Time_Count
 
@@ -8,10 +9,13 @@ import secret
 from discord_user.types import EventType, DiscordMessage, ClientDevice, Activity, ActivityType
 from discord_user.types.slash_command import SlashCommand, SlashCommandMessage
 from ds_capcha.capcha_api import CapchaSolver
+from discord_user.global_logger.logs import set_logging_level
+# Изменяем уровень логгера
 
+set_logging_level(level=logging.DEBUG)
 
-auth_token_discord = secret.auth_token_discord_2 # TODO set guild_id
-app_session_reka = secret.reka_session # TODO set guild_id
+auth_token_discord = secret.auth_token_discord_2 # TODO set auth_token_discord
+app_session_reka = secret.reka_session # TODO set app_session_reka
 guild_id = secret.test_guild_id # TODO set guild_id
 channel_id = secret.test_channel_id # TODO set channel_id
 
@@ -81,7 +85,7 @@ async def on_start():
         await asyncio.sleep(5)
 
         command_3 = SlashCommand.from_dict(json_data_like, session_id=client.info.session_id)
-        
+
         await client.use_slash_command(command_3)
 
     print("Пользователь запущен!")
@@ -107,13 +111,25 @@ async def on_start():
     #     "timestamps":{"start":int(datetime.datetime.now().timestamp())}
     # }
 
+    # json_data = {
+    #     'id': 'ed52e7003b57bc8',
+    #     'created_at': 1723184107714,
+    #     'name': 'глаженье Peely',
+    #     'type': ActivityType.COMPETING,
+    #     'assets': {
+    #         'large_image': 'mp:attachments/1210741539345534997/1262000096057229393/bc135601-bc4e-4a2c-a661-18ddb9711fa5.gif?ex=66b941ed&is=66b7f06d&hm=4233455dd270395a27caa61c8bd1675fe9b05da9335975efe362f30b2fd621a8&'
+    #     }
+    # }
     json_data = {
         'id': 'ed52e7003b57bc8',
         'created_at': 1723184107714,
-        'name': 'глаженье Peely',
-        'type': ActivityType.COMPETING,
+        'name': 'Peely сладких снов',
+        'type': ActivityType.WATCHING,
         'assets': {
-            'large_image': 'mp:attachments/1210741539345534997/1262000096057229393/bc135601-bc4e-4a2c-a661-18ddb9711fa5.gif?ex=66b941ed&is=66b7f06d&hm=4233455dd270395a27caa61c8bd1675fe9b05da9335975efe362f30b2fd621a8&'
+            'large_image': 'mp:attachments/1139289891272921179/1271359886806089738/chatbot-gpt.ru.gif?ex=66bbaae9&is=66ba5969&hm=9154801c771fada64a095e6c61c9f79abd55a13acf0538fc6cfebffe17d56010&'
+        },
+        "timestamps": {
+            "start": int(datetime.datetime.now().timestamp()) * 1000
         }
     }
 
@@ -153,7 +169,7 @@ async def on_message(message: DiscordMessage):
         await client.use_slash_command(command)
 
 
-async def solve_up(slash_command_message: SlashCommandMessage, attempts=5):
+async def solve_up(slash_command_message: SlashCommandMessage, attempts=15):
     global last_images, error_up_in_row
     first_embed = slash_command_message.embeds[0]
     if first_embed.image.url:
@@ -192,7 +208,7 @@ async def solve_up(slash_command_message: SlashCommandMessage, attempts=5):
                 try:
                     test_text = f"Я думаю: {capcha_code}: {capcha_url}"
                     print("/up:", test_text)
-                    await client.send_message(chat_id=channel_id, text=test_text)
+                    await client.send_message(chat_id=channel_id, text=f"Я думаю")
                 except:
                     print("error in send message in /up")
 
@@ -203,7 +219,7 @@ async def solve_up(slash_command_message: SlashCommandMessage, attempts=5):
                 error_up_in_row += 1
                 if error_up_in_row >= attempts:
                     error_text = f"Не удалось решить /up спустя {attempts} попыток <@&1079868831016693832>"
-                    await client.send_message(chat_id=channel_id, text=error_text)
+                    await client.send_message(chat_id=channel_id, text=f"Не удалось решить /up спустя {attempts} попыток <@&1079868831016693832>")
                     error_up_in_row = 0
                     raise Exception(error_text)
                 print(f"temp error in solve /up: {e}")
@@ -225,7 +241,7 @@ async def solve_up(slash_command_message: SlashCommandMessage, attempts=5):
         print(f"Ответ [/up]: {first_embed.description}")
 
 
-async def solve_dump(slash_command_message: SlashCommandMessage, attempts=5):
+async def solve_dump(slash_command_message: SlashCommandMessage, attempts=15):
     global last_images, error_dump_in_row
     first_embed = slash_command_message.embeds[0]
     if first_embed.image.url:
@@ -243,12 +259,12 @@ async def solve_dump(slash_command_message: SlashCommandMessage, attempts=5):
 
                 await client.use_slash_command(command_1)
 
-                @client.event_handler(EventType.INTERACTION_SUCCESS)
-                async def interaction_success_handler(data):
+                @client.event_handler(EventType.INTERACTION_MODAL_CREATE)
+                async def INTERACTION_MODAL_CREATE_handler(data):
                     global error_dump_in_row
                     try:
                         print(f"DATA: {data}")
-                        client._event_handlers[EventType.INTERACTION_SUCCESS].clear()  # отчистка хэндлера
+                        client._event_handlers[EventType.INTERACTION_MODAL_CREATE].clear()  # отчистка хэндлера
 
                         capcha_code, image_for_dataset = await asyncio.to_thread(capcha_solver.solve_capcha,
                                                                                  capcha_url=capcha_url, delete_temp=False,
@@ -269,7 +285,10 @@ async def solve_dump(slash_command_message: SlashCommandMessage, attempts=5):
                         command_2 = SlashCommand.from_dict(json_data_bump_3, session_id=client.info.session_id)
 
                         test_text = f"Я думаю: {capcha_code}: {capcha_url}"
-                        await client.send_message(chat_id=channel_id, text=test_text)
+                        try:
+                            await client.send_message(chat_id=channel_id, text=test_text)
+                        except:
+                            pass
 
                         await client.use_slash_command(command_2)
                         error_dump_in_row = 0
@@ -289,7 +308,7 @@ async def solve_dump(slash_command_message: SlashCommandMessage, attempts=5):
             except Exception as e:
                 error_dump_in_row += 1
                 if error_dump_in_row >= attempts:
-                    error_text = f"Не удалось решить /dump спустя {attempts} попыток <@&1079868831016693832>"
+                    error_text = f"Не удалось решить /bump спустя {attempts} попыток <@&1079868831016693832>"
                     await client.send_message(chat_id=channel_id, text=error_text)
                     raise Exception(error_text)
                 print(f"Error in solve /dump: {e}")
