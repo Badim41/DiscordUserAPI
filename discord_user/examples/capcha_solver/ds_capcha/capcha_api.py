@@ -73,16 +73,18 @@ class CapchaSolver:
             # image1.paste(image2_resized, (743, 795))
             # image1.save(combined_capcha)
             print("capcha API: ChatGPT4")
-            nsfw, answer = describe_image(image_path=capcha_path, prompt=prompt,
-                                          describers=[Describers_API.ChatGPT4])
+
+            # nsfw, answer = describe_image(image_path=capcha_path, prompt=prompt,
+            #                               describers=[Describers_API.ChatGPT4])
+            answer = self.account.ask_gpt(prompt=prompt, file_path=capcha_path)
             if not answer:
                 raise Exception("no result")
 
-        if delete_temp:
-            try:
-                os.remove(combined_capcha)
-            except:
-                pass
+        # if delete_temp:
+        #     try:
+        #         os.remove(combined_capcha)
+        #     except:
+        #         pass
 
         converted, json_answer = convert_answer_to_json(answer, keys=["text"])
         text = json_answer['text']
