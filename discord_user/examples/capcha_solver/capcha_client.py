@@ -90,43 +90,13 @@ async def on_start():
 
     print("Пользователь запущен!")
 
-    # json_data = {
-    #     'id': 'ed52e7003b57bc8',
-    #     'created_at': 1723184107714,
-    #     'name': 'Решает капчи',
-    #     'type': 0,
-    #     'assets': {
-    #         'large_image': 'mp:emojis/1212496120660365444.webp?format=webp&width=60&height=60'
-    #     }
-    # }
-    #
-    # json_data = {
-    #     'id': 'ed52e7003b57bc8',
-    #     'created_at': 1723184107714,
-    #     'name': 'Охота на Peely!',
-    #     'type': 0,
-    #     'assets': {
-    #         'large_image': 'mp:avatars/604235444305133568/ada94027a8cd4bf23c7a30a6fef880bc.webp?size=80'
-    #     },
-    #     "timestamps":{"start":int(datetime.datetime.now().timestamp())}
-    # }
-
-    # json_data = {
-    #     'id': 'ed52e7003b57bc8',
-    #     'created_at': 1723184107714,
-    #     'name': 'глаженье Peely',
-    #     'type': ActivityType.COMPETING,
-    #     'assets': {
-    #         'large_image': 'mp:attachments/1210741539345534997/1262000096057229393/bc135601-bc4e-4a2c-a661-18ddb9711fa5.gif?ex=66b941ed&is=66b7f06d&hm=4233455dd270395a27caa61c8bd1675fe9b05da9335975efe362f30b2fd621a8&'
-    #     }
-    # }
     json_data = {
         'id': 'ed52e7003b57bc8',
         'created_at': 1723184107714,
-        'name': 'Peely сладких снов',
+        'name': 'как Peely смотрит на бесюкатого фенька',
         'type': ActivityType.WATCHING,
         'assets': {
-            'large_image': 'mp:attachments/1139289891272921179/1271359886806089738/chatbot-gpt.ru.gif?ex=66bbaae9&is=66ba5969&hm=9154801c771fada64a095e6c61c9f79abd55a13acf0538fc6cfebffe17d56010&'
+            'large_image': 'mp:external/XUHTg9WU9tbN4CIV5h9am57_LFFPeSR4mroRFeErhzA/https/yellowfire.ru/uploaded_files/fara_spin.gif?width=375&height=375'
         },
         "timestamps": {
             "start": int(datetime.datetime.now().timestamp()) * 1000
