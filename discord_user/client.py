@@ -1,6 +1,7 @@
 import json
 import traceback
 import zlib
+from typing import List
 
 import aiofiles
 import aiohttp
@@ -403,3 +404,27 @@ class Client:
             else:
                 raise DiscordRequestError(
                     f"Ошибка при удалении реакции. Статус ошибки: {response.status}: {await response.text()}")
+    async def get_messages(self,chat_id, limit:[int,str]=50) -> List[DiscordMessage]:
+        url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
+
+        querystring = {"limit": str(limit)}
+
+        payload = ""
+
+        headers = {
+            "authorization": self._secret_token
+        }
+
+        async with self._session.get(url, data=payload, headers=headers, params=querystring) as response:
+            if response.status == 200:
+                response_text = None
+                try:
+                    response_text = await response.json()
+                    return [DiscordMessage(json_data) for json_data in response_text]
+                except Exception:
+                    pass
+                raise DiscordRequestError(
+                    f"Ошибка при получении сообщений: {response_text}. Код ошибки: {response.status}")
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при получении сообщений. Статус ошибки: {response.status}: {await response.text()}")

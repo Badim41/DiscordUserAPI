@@ -11,7 +11,15 @@ client = discord_user.Client(secret_token=secret.auth_token_discord, device=Clie
 @client.on_start
 async def on_start():
     print("Пользователь запущен")
-    await client.send_voice("1255075359322279959", audio_path=r"C:\Users\as280\Downloads\544816254435983360-Thomas-tts.mp3")
+    messages = await client.get_messages(chat_id="1199234332062138478", limit=5)
+    messages_text = ""
+    for message in reversed(messages):
+        messages_text += f"{message.author.global_name}: {message.text}\n"
+
+    print(messages_text)
+
+    # exit()
+    # await client.send_voice("1255075359322279959", audio_path=r"C:\Users\as280\Downloads\544816254435983360-Thomas-tts.mp3")
 
     # JSON данные для создания активности
     json_data = {
