@@ -4,3 +4,5 @@ class DiscordUserException(Exception):
 
 class DiscordRequestError(DiscordUserException):
     """Ошибка при выполнении запроса"""
+class InvalidTokenError(DiscordUserException):
+    """Неверный токен"""

@@ -1,14 +1,13 @@
 import json
-import os
 import traceback
-import wave
 import zlib
 
 import aiofiles
 import aiohttp
+from discord_user.types import Emoji
 
 from .connections import ConnectionState
-from .errors import DiscordRequestError
+from .errors import DiscordRequestError, InvalidTokenError
 from .global_logger import _log
 from .types import SelfUserInfo, Activity
 from .types.device import ClientDevice
@@ -17,7 +16,6 @@ from .types.message import DiscordMessage
 from .types.presence import PresenceStatus, Presence
 from .types.slash_command import SlashCommand, SlashCommandMessage
 from .utils.audio_utils import *
-from .utils.ds_base64 import *
 from .utils.mimetype_util import get_mimetype
 from .utils.time_util import get_nonce
 
@@ -115,6 +113,8 @@ class Client:
                 _log.warning("Reconnect to session...")
                 await self._connection.connect()
                 return
+            elif data == 4004:
+                raise InvalidTokenError("Неверный токен")
             else:
                 _log.debug(f"Message {data} with type type: {type(data)} ignored")
                 return
@@ -232,7 +232,7 @@ class Client:
                     raise DiscordRequestError(f"Ошибка при обработке ответа: {e}")
             else:
                 raise DiscordRequestError(
-                    f"Ошибка при отправке аудио. Статус ошибки: {response.status}: {await response.text()}")
+                    f"Ошибка при создания attachment. Статус ошибки: {response.status}: {await response.text()}")
 
     # ================== POST REQUESTS =========================
     async def use_slash_command(self, slash_command: SlashCommand, force_multipart_form_data=False):
@@ -269,13 +269,13 @@ class Client:
                 "status": status,
                 "since": 0,
                 "activities": [activity.to_dict()],
-                "afk": False
+                "afk": self._afk
             }
         }
         print("set activity:", activity.to_dict())
         await self._connection.websocket.send_json(activity_json)
 
-    async def send_voice(self, chat_id, audio_path):
+    async def send_voice(self, chat_id, audio_path) -> DiscordMessage:
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
 
         # Получение продолжительности аудио в секундах и формирование waveform
@@ -308,14 +308,14 @@ class Client:
         async with self._session.post(url, headers=headers, json=payload) as response:
             if response.status == 200:
                 try:
-                    return await response.json()
+                    return DiscordMessage(await response.json())
                 except Exception as e:
                     raise DiscordRequestError(f"Ошибка при обработке ответа: {e}")
             else:
                 raise DiscordRequestError(
                     f"Ошибка при отправке аудио. Статус ошибки: {response.status}: {await response.text()}")
 
-    async def send_message(self, chat_id, text):
+    async def send_message(self, chat_id, text="", file_path=None) -> DiscordMessage:
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
 
         payload = {
@@ -330,6 +330,15 @@ class Client:
             "authorization": self._secret_token
         }
 
+        if file_path:
+            attachments_json_data = await self._create_attachment(channel_id=chat_id, file_path=file_path)
+            uploaded_filename = attachments_json_data['attachments'][0]['upload_filename']
+            payload["attachments"] = [{
+                "id": "0",
+                "filename": os.path.basename(file_path),
+                "uploaded_filename": uploaded_filename
+            }]
+
         _log.debug(f"payload send_message: {payload}")
 
         async with self._session.post(url, headers=headers, json=payload) as response:
@@ -337,7 +346,7 @@ class Client:
                 response_text = None
                 try:
                     response_text = await response.json()
-                    return response_text
+                    return DiscordMessage(response_text)
                 except Exception:
                     pass
                 raise DiscordRequestError(
@@ -345,3 +354,52 @@ class Client:
             else:
                 raise DiscordRequestError(
                     f"Ошибка при отправке сообщения. Статус ошибки: {response.status}: {await response.text()}")
+
+    async def delete_message(self, chat_id, message_id):
+        url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}"
+
+        headers = {
+            "authorization": self._secret_token
+        }
+
+        async with self._session.delete(url, headers=headers) as response:
+            if response.status == 204:
+                return
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при удалении сообщения. Статус ошибки: {response.status}: {await response.text()}")
+    async def set_reaction(self, chat_id, message_id, reaction:[Emoji, str]):
+        if isinstance(reaction, str):
+            emoji_str = reaction
+        elif isinstance(reaction, Emoji):
+            emoji_str = f"{reaction.name}:{reaction.id}/0" # tatar:769298493922607187/0
+        url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}/reactions/{emoji_str}/@me?location=Message Reaction Picker&type=0"
+
+        headers = {
+            "authorization": self._secret_token
+        }
+
+        async with self._session.put(url, headers=headers) as response:
+            if response.status == 204:
+                return
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при установки реакции. Статус ошибки: {response.status}: {await response.text()}")
+
+    async def remove_reaction(self, chat_id, message_id, reaction:[Emoji, str]):
+        if isinstance(reaction, str):
+            emoji_str = reaction
+        elif isinstance(reaction, Emoji):
+            emoji_str = f"{reaction.name}:{reaction.id}/0" # tatar:769298493922607187/0
+        url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}/reactions/{emoji_str}/@me?location=Message Inline Button&burst=false"
+
+        headers = {
+            "authorization": self._secret_token
+        }
+
+        async with self._session.delete(url, headers=headers) as response:
+            if response.status == 204:
+                    return
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при удалении реакции. Статус ошибки: {response.status}: {await response.text()}")

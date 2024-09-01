@@ -28,6 +28,7 @@ class SelfUserInfo:
         self.user_guild_settings = json_data['user_guild_settings']
         self_user = json_data['user']
         self.is_verified: bool = self_user['verified']
+        self.user_id: str = self_user['id']
         self.username: str = self_user['username']
         self.is_nitro: bool = self_user['premium']
         self.phone: str = self_user['phone']

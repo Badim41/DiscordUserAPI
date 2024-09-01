@@ -9,7 +9,9 @@ class DiscordMessage:
         self.referenced_message = None
         self.pinned = data.get('pinned')
         self.nonce = data.get('nonce')
-        self.mentions = []
+        self.mentions = data.get('mentions')
+        self.mention_roles = data.get('mention_roles')
+        self.mention_everyone = data.get('mention_everyone')
         self.text = data['content']
         self.message_id = data['id']
         self.guild_id = data.get('guild_id', None)
