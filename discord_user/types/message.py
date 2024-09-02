@@ -1,4 +1,5 @@
 from .user import User
+from ..types import Sticker
 
 
 class DiscordMessage:
@@ -18,7 +19,7 @@ class DiscordMessage:
         self.channel_id = data['channel_id']
         self.author = User(data['author'])
         self.attachments = data.get('attachments', [])
-        self.sticker_items = data.get('sticker_items', [])
+        self.sticker_items = [Sticker(sticker_data) for sticker_data in data.get('sticker_items', [])]
         self.embeds = data.get('embeds', [])
         self.components = data.get('components', [])
         self.edited_timestamp = data.get('edited_timestamp', None)

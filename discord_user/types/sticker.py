@@ -12,13 +12,16 @@ class Sticker:
           'available': True,
           'asset': ''
         }
+
+        {'name': 'Sup', 'id': '816087792291282944', 'format_type': 3}
         """
-        self.type = json_data['type']
-        self.tags = json_data['tags']
         self.name = json_data['name']
         self.id = json_data['id']
-        self.guild_id = json_data['guild_id']
         self.format_type = json_data['format_type']
-        self.description = json_data['description']
-        self.available = json_data['available']
-        self.asset = json_data['asset']
+
+        self.type = json_data.get('type')
+        self.tags = json_data.get('tags')
+        self.guild_id = json_data.get('guild_id')
+        self.description = json_data.get('description')
+        self.available = json_data.get('available')
+        self.asset = json_data.get('asset')
