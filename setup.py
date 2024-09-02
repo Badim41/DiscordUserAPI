@@ -2,7 +2,7 @@ from setuptools import setup, find_packages
 
 setup(
     name='DiscordUserAPI',
-    version='0.111',
+    version='0.112',
     packages=find_packages(),
     install_requires=[
         'requests==2.31.0',
