@@ -19,8 +19,28 @@ class DiscordMessage:
         self.author = User(data['author'])
         self.attachments = data.get('attachments', [])
 
-        if 'referenced_message' in data:
+        if data.get('referenced_message'):
             self.referenced_message = DiscordMessage(data['referenced_message'])
 
     def __str__(self):
         return f"DiscordMessage(text={self.text}, message_id={self.message_id}, guild_id={self.guild_id}, channel_id={self.channel_id}, author={self.author}, attachments={self.attachments})"
+
+    def to_dict(self):
+        data = {
+            'type': self.type,
+            'tts': self.tts,
+            'timestamp': self.timestamp,
+            'referenced_message': self.referenced_message.to_dict() if self.referenced_message else None,
+            'pinned': self.pinned,
+            'nonce': self.nonce,
+            'mentions': self.mentions,
+            'mention_roles': self.mention_roles,
+            'mention_everyone': self.mention_everyone,
+            'content': self.text,
+            'id': self.message_id,
+            'guild_id': self.guild_id,
+            'channel_id': self.channel_id,
+            'author': self.author.to_dict() if self.author else None,
+            'attachments': self.attachments
+        }
+        return data

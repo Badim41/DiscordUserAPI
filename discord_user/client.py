@@ -1,4 +1,5 @@
 import json
+import os
 import traceback
 import zlib
 from typing import List
@@ -211,7 +212,7 @@ class Client:
         # Чтение аудиофайла для отправки
         if not mimetype:
             mimetype = get_mimetype(file_path)
-            print("mimetype", mimetype)
+            # print("mimetype", mimetype)
 
         async with aiofiles.open(file_path, 'rb') as f:
             audio_data = await f.read()
@@ -273,21 +274,27 @@ class Client:
                 "afk": self._afk
             }
         }
-        print("set activity:", activity.to_dict())
+        # print("set activity:", activity.to_dict())
         await self._connection.websocket.send_json(activity_json)
 
     async def send_voice(self, chat_id, audio_path) -> DiscordMessage:
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
 
+        audio_path_mp3 = convert_audio(original_audio_path=audio_path, audio_format="mp3")
+
         # Получение продолжительности аудио в секундах и формирование waveform
-        duration_secs = get_audio_duration(audio_path)
-        waveform_data = generate_waveform(audio_path)
+        duration_secs = get_audio_duration(audio_path_mp3)
+        waveform_data = generate_waveform(audio_path_mp3)
 
         # print("waveform_data", waveform_data)
         # print("duration_secs", duration_secs)
 
-        attachments_json_data = await self._create_attachment(channel_id=chat_id, file_path=audio_path)
+        attachments_json_data = await self._create_attachment(channel_id=chat_id, file_path=audio_path_mp3)
         uploaded_filename = attachments_json_data['attachments'][0]['upload_filename']
+
+        if not audio_path == audio_path_mp3:
+            os.remove(audio_path_mp3)
+
         # Формирование данных для отправки
         payload = {
             "nonce": get_nonce(),

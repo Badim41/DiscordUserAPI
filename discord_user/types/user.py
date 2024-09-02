@@ -19,11 +19,22 @@ class User:
     def __str__(self):
         return f"DiscordAuthor(username={self.username}, id={self.id}, avatar={self.avatar}, global_name={self.global_name}, discriminator={self.discriminator}, clan={self.clan}, avatar_decoration_data={self.avatar_decoration_data})"
 
+    def to_dict(self):
+        data = {
+            "username": self.username,
+            "id": self.id,
+            "public_flags": self.public_flags,
+            "global_name": self.global_name,
+            "discriminator": self.discriminator,
+            "clan": self.clan,
+            "avatar_decoration_data": self.avatar_decoration_data,
+            "avatar": self.avatar,
+            "bot": self.bot
+        }
+        return data
 
 class SelfUserInfo:
     def __init__(self, json_data):
-        with open("user_info.json", "w", encoding="utf-8") as writer:
-            writer.write(str(json_data))
         self.local_message_users = {user_data['id']: User(user_data) for user_data in json_data['users']}
         self.user_guild_settings = json_data['user_guild_settings']
         self_user = json_data['user']
@@ -70,3 +81,6 @@ class SelfUserInfo:
         self.guilds = {guild_data['id']: Guild(guild_data) for guild_data in json_data['guilds']}
         self.regions: List[str] = json_data['geo_ordered_rtc_regions']
         self.session_id = json_data['session_id']
+
+        with open(f"user_info_{self.user_id}.json", "w", encoding="utf-8") as writer:
+            writer.write(str(json_data))

@@ -18,8 +18,8 @@ def get_audio_duration(audio_path):
     return len(AudioSegment.from_file(audio_path)) / 1000.0  # продолжительность в секундах
 
 def generate_waveform(audio_path):
-    audio_path = convert_audio(original_audio_path=audio_path, audio_format="ogg")
-    audio = AudioSegment.from_file(audio_path)
+    audio_path_ogg = convert_audio(original_audio_path=audio_path, audio_format="ogg")
+    audio = AudioSegment.from_file(audio_path_ogg)
     # Преобразуем аудиофайл в массив чисел (samples)
     samples = audio.get_array_of_samples()
     # Уменьшаем количество точек до 256 для `waveform`
@@ -28,9 +28,7 @@ def generate_waveform(audio_path):
     # Кодируем в base64
     waveform_encoded = base64.b64encode(bytes(waveform)).decode('utf-8')
 
-    try:
-        os.remove(audio_path)
-    except:
-        pass
+    if not audio_path_ogg == audio_path:
+        os.remove(audio_path_ogg)
 
     return waveform_encoded
