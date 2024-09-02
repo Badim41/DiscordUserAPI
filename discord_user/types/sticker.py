@@ -25,3 +25,12 @@ class Sticker:
         self.description = json_data.get('description')
         self.available = json_data.get('available')
         self.asset = json_data.get('asset')
+
+    def is_exportable(self):
+        return self.format_type == 1
+
+    def get_url(self):
+        if self.is_exportable():
+            return f"https://media.discordapp.net/stickers/{self.id}.webp?size=4096"
+        else:
+            return f"{self.name} ({self.id}) имеет формат {self.format_type}, который нельзя экспортировать ссылкой"

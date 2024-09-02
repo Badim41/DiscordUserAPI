@@ -7,3 +7,5 @@ class Emoji:
         self.id = json_data['id']
         self.available = json_data['available']
         self.animated = json_data['animated']
+    def get_url(self):
+        return f"https://cdn.discordapp.com/emojis/{self.id}.webp?size=4096"
