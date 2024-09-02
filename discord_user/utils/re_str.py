@@ -1,9 +1,10 @@
 import re
+from typing import List
 
 from ..types import Emoji
 
 
-def extract_discord_emojis(text):
+def extract_discord_emojis(text) -> List[Emoji]:
     # Регулярное выражение для поиска эмоджи
     emoji_pattern = r'<:\w+:\d+>'
 

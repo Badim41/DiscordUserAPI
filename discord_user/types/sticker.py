@@ -34,3 +34,16 @@ class Sticker:
             return f"https://media.discordapp.net/stickers/{self.id}.webp?size=4096"
         else:
             return f"{self.name} ({self.id}) имеет формат {self.format_type}, который нельзя экспортировать ссылкой"
+
+    def to_dict(self):
+        return {
+            'name': self.name,
+            'id': self.id,
+            'format_type': self.format_type,
+            'type': self.type,
+            'tags': self.tags,
+            'guild_id': self.guild_id,
+            'description': self.description,
+            'available': self.available,
+            'asset': self.asset
+        }

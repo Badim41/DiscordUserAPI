@@ -47,7 +47,7 @@ class DiscordMessage:
             'channel_id': self.channel_id,
             'author': self.author.to_dict() if self.author else None,
             'attachments': self.attachments,
-            'sticker_items': self.sticker_items,
+            'sticker_items': [sticker_item.to_dict() for sticker_item in self.sticker_items],
             'embeds': self.embeds,
             'components': self.components,
             'edited_timestamp': self.edited_timestamp
