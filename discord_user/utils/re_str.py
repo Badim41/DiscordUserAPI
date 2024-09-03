@@ -5,9 +5,10 @@ from ..types import Emoji
 
 
 def extract_discord_emojis(text) -> List[Emoji]:
-    # Регулярное выражение для поиска эмоджи
-    emoji_pattern = r'<:\w+:\d+>'
+    emoji_pattern = r'<a?:\w+:\d+>'
+    emojis = re.findall(emoji_pattern, text)
 
-    emojis_str = re.findall(emoji_pattern, text)
+    # Убираем "a:" из анимированных эмодзи
+    cleaned_emojis = [emoji.replace('<a:', '<') for emoji in emojis]
 
-    return [Emoji.from_str(emoji_str) for emoji_str in emojis_str]
+    return [Emoji.from_str(emoji_str) for emoji_str in cleaned_emojis]
