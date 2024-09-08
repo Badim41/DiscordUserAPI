@@ -7,7 +7,7 @@ setup(
     install_requires=[
         'requests==2.31.0',
         'websockets',
-        'aiohttp',
+        'aiohttp==3.8.6',
         'aiohttp-socks',
         'pydub',
         'aiofiles'
