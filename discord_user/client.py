@@ -55,15 +55,16 @@ class Client:
         self._device = device
         self._afk: bool = afk
         self._proxy_uri: str = proxy_uri
-        if self._proxy_uri:
-            self._session_connector = ProxyConnector.from_url(self._proxy_uri)
-        else:
-            self._session_connector = aiohttp.TCPConnector()
         # self._session = None
         # self._session.proxies = {'http': self._proxy_uri, 'https': self._proxy_uri}
 
         self.info: SelfUserInfo = None
-
+    @property
+    def _session_connector(self):
+        if self._proxy_uri:
+            return ProxyConnector.from_url(self._proxy_uri)
+        else:
+            return aiohttp.TCPConnector()
     # Декораторы для регистрации обработчиков
     async def start_polling(self):
         self._connection = ConnectionState(secret_token=self._secret_token, handler_method=self._handle_ws_event,
