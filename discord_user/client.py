@@ -59,7 +59,7 @@ class Client:
             self._session_connector = ProxyConnector.from_url(self._proxy_uri)
         else:
             self._session_connector = aiohttp.TCPConnector()
-        self._session = None
+        # self._session = None
         # self._session.proxies = {'http': self._proxy_uri, 'https': self._proxy_uri}
 
         self.info: SelfUserInfo = None
@@ -249,7 +249,11 @@ class Client:
     # ================== POST REQUESTS =========================
     async def use_slash_command(self, slash_command: SlashCommand, force_multipart_form_data=False):
         url = 'https://discord.com/api/v9/interactions'
-        headers = self._session.headers
+
+        headers = {
+            "authorization": self._secret_token
+        }
+
         json_data = slash_command.to_json()
         if json.loads(json_data).get("type",
                                      None) == 2 or force_multipart_form_data:  # я не уверен, нужно ли вообще form_data
