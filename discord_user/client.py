@@ -6,6 +6,7 @@ from typing import List
 
 import aiofiles
 import aiohttp
+from aiohttp_socks import ProxyConnector
 from discord_user.types import Emoji
 
 from .connections import ConnectionState
@@ -54,9 +55,12 @@ class Client:
         self._device = device
         self._afk: bool = afk
         self._proxy_uri: str = proxy_uri
-        self._session = aiohttp.ClientSession()
-        self._session.proxies = {'http': self._proxy_uri, 'https': self._proxy_uri}
-        self._session.headers['authorization'] = self._secret_token
+        if self._proxy_uri:
+            self._session_connector = ProxyConnector.from_url(self._proxy_uri)
+        else:
+            self._session_connector = aiohttp.TCPConnector()
+        self._session = None
+        # self._session.proxies = {'http': self._proxy_uri, 'https': self._proxy_uri}
 
         self.info: SelfUserInfo = None
 
@@ -189,21 +193,24 @@ class Client:
         headers = {
             "Authorization": self._secret_token
         }
+        async with aiohttp.ClientSession(connector=self._session_connector) as session:
+            session.headers['authorization'] = self._secret_token
 
-        async with self._session.post(url, headers=headers, json=payload) as response:
-            if response.status == 200:
-                try:
-                    response_json = await response.json()
-                    return response_json
-                except Exception:
+            async with session.post(url, headers=headers, json=payload) as response:
+                self._session.headers['authorization'] = self._secret_token
+                if response.status == 200:
+                    try:
+                        response_json = await response.json()
+                        return response_json
+                    except Exception:
+                        raise DiscordRequestError(
+                            f"Ошибка при получении ссылки. Код ошибки: {response.status}"
+                        )
+                else:
+                    response_text = await response.text()
                     raise DiscordRequestError(
-                        f"Ошибка при получении ссылки. Код ошибки: {response.status}"
+                        f"Ошибка при получении ссылки. Статус ошибки: {response.status}: {response_text}"
                     )
-            else:
-                response_text = await response.text()
-                raise DiscordRequestError(
-                    f"Ошибка при получении ссылки. Статус ошибки: {response.status}: {response_text}"
-                )
 
     async def _create_attachment(self, channel_id, file_path, mimetype=None):
         filename = os.path.basename(file_path)
@@ -225,16 +232,19 @@ class Client:
         json_data_upload = await self._get_upload_url(channel_id=channel_id, file_path=file_path)
         upload_url = json_data_upload['attachments'][0]['upload_url']
 
-        async with self._session.put(upload_url, headers=headers, data=form_data) as response:
-            if response.status == 200:
-                try:
-                    await response.text()
-                    return json_data_upload
-                except Exception as e:
-                    raise DiscordRequestError(f"Ошибка при обработке ответа: {e}")
-            else:
-                raise DiscordRequestError(
-                    f"Ошибка при создания attachment. Статус ошибки: {response.status}: {await response.text()}")
+        async with aiohttp.ClientSession(connector=self._session_connector) as session:
+            session.headers['authorization'] = self._secret_token
+
+            async with session.put(upload_url, headers=headers, data=form_data) as response:
+                if response.status == 200:
+                    try:
+                        await response.text()
+                        return json_data_upload
+                    except Exception as e:
+                        raise DiscordRequestError(f"Ошибка при обработке ответа: {e}")
+                else:
+                    raise DiscordRequestError(
+                        f"Ошибка при создания attachment. Статус ошибки: {response.status}: {await response.text()}")
 
     # ================== POST REQUESTS =========================
     async def use_slash_command(self, slash_command: SlashCommand, force_multipart_form_data=False):
@@ -251,16 +261,19 @@ class Client:
         # print("payload", payload)
         # print(f"SEND SLASH COMMAND: {json_data}")
 
-        async with self._session.post(url, headers=headers, data=payload) as response:
-            if response.status != 204:
-                text = None
-                try:
-                    text = await response.json()
-                except Exception:
-                    pass
-                raise DiscordRequestError(f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status}")
+        async with aiohttp.ClientSession(connector=self._session_connector) as session:
+            session.headers['authorization'] = self._secret_token
 
-            # print("interactions SUCCESS", await response.text())
+            async with session.post(url, headers=headers, data=payload) as response:
+                if response.status != 204:
+                    text = None
+                    try:
+                        text = await response.json()
+                    except Exception:
+                        pass
+                    raise DiscordRequestError(f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status}")
+
+                # print("interactions SUCCESS", await response.text())
 
     async def change_activity(self, activity: Activity, status: str):
         if status not in PresenceStatus.status_list:
@@ -312,16 +325,18 @@ class Client:
         headers = {
             "authorization": self._secret_token
         }
+        async with aiohttp.ClientSession(connector=self._session_connector) as session:
+            session.headers['authorization'] = self._secret_token
 
-        async with self._session.post(url, headers=headers, json=payload) as response:
-            if response.status == 200:
-                try:
-                    return DiscordMessage(await response.json())
-                except Exception as e:
-                    raise DiscordRequestError(f"Ошибка при обработке ответа: {e}")
-            else:
-                raise DiscordRequestError(
-                    f"Ошибка при отправке аудио. Статус ошибки: {response.status}: {await response.text()}")
+            async with session.post(url, headers=headers, json=payload) as response:
+                if response.status == 200:
+                    try:
+                        return DiscordMessage(await response.json())
+                    except Exception as e:
+                        raise DiscordRequestError(f"Ошибка при обработке ответа: {e}")
+                else:
+                    raise DiscordRequestError(
+                        f"Ошибка при отправке аудио. Статус ошибки: {response.status}: {await response.text()}")
 
     async def send_message(self, chat_id, text="", file_path=None) -> DiscordMessage:
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
@@ -348,20 +363,22 @@ class Client:
             }]
 
         _log.debug(f"payload send_message: {payload}")
+        async with aiohttp.ClientSession(connector=self._session_connector) as session:
+            session.headers['authorization'] = self._secret_token
 
-        async with self._session.post(url, headers=headers, json=payload) as response:
-            if response.status == 200:
-                response_text = None
-                try:
-                    response_text = await response.json()
-                    return DiscordMessage(response_text)
-                except Exception:
-                    pass
-                raise DiscordRequestError(
-                    f"Ошибка при отправке сообщения: {response_text}. Код ошибки: {response.status}")
-            else:
-                raise DiscordRequestError(
-                    f"Ошибка при отправке сообщения. Статус ошибки: {response.status}: {await response.text()}")
+            async with session.post(url, headers=headers, json=payload) as response:
+                if response.status == 200:
+                    response_text = None
+                    try:
+                        response_text = await response.json()
+                        return DiscordMessage(response_text)
+                    except Exception:
+                        pass
+                    raise DiscordRequestError(
+                        f"Ошибка при отправке сообщения: {response_text}. Код ошибки: {response.status}")
+                else:
+                    raise DiscordRequestError(
+                        f"Ошибка при отправке сообщения. Статус ошибки: {response.status}: {await response.text()}")
 
     async def delete_message(self, chat_id, message_id):
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}"
@@ -369,13 +386,15 @@ class Client:
         headers = {
             "authorization": self._secret_token
         }
+        async with aiohttp.ClientSession(connector=self._session_connector) as session:
+            session.headers['authorization'] = self._secret_token
 
-        async with self._session.delete(url, headers=headers) as response:
-            if response.status == 204:
-                return
-            else:
-                raise DiscordRequestError(
-                    f"Ошибка при удалении сообщения. Статус ошибки: {response.status}: {await response.text()}")
+            async with session.delete(url, headers=headers) as response:
+                if response.status == 204:
+                    return
+                else:
+                    raise DiscordRequestError(
+                        f"Ошибка при удалении сообщения. Статус ошибки: {response.status}: {await response.text()}")
     async def set_reaction(self, chat_id, message_id, reaction:[Emoji, str]):
         if isinstance(reaction, str):
             emoji_str = reaction
@@ -386,13 +405,15 @@ class Client:
         headers = {
             "authorization": self._secret_token
         }
+        async with aiohttp.ClientSession(connector=self._session_connector) as session:
+            session.headers['authorization'] = self._secret_token
 
-        async with self._session.put(url, headers=headers) as response:
-            if response.status == 204:
-                return
-            else:
-                raise DiscordRequestError(
-                    f"Ошибка при установки реакции. Статус ошибки: {response.status}: {await response.text()}")
+            async with session.put(url, headers=headers) as response:
+                if response.status == 204:
+                    return
+                else:
+                    raise DiscordRequestError(
+                        f"Ошибка при установки реакции. Статус ошибки: {response.status}: {await response.text()}")
 
     async def remove_reaction(self, chat_id, message_id, reaction:[Emoji, str]):
         if isinstance(reaction, str):
@@ -404,13 +425,15 @@ class Client:
         headers = {
             "authorization": self._secret_token
         }
+        async with aiohttp.ClientSession(connector=self._session_connector) as session:
+            session.headers['authorization'] = self._secret_token
 
-        async with self._session.delete(url, headers=headers) as response:
-            if response.status == 204:
-                    return
-            else:
-                raise DiscordRequestError(
-                    f"Ошибка при удалении реакции. Статус ошибки: {response.status}: {await response.text()}")
+            async with session.delete(url, headers=headers) as response:
+                if response.status == 204:
+                        return
+                else:
+                    raise DiscordRequestError(
+                        f"Ошибка при удалении реакции. Статус ошибки: {response.status}: {await response.text()}")
     async def get_messages(self,chat_id, limit:[int,str]=50) -> List[DiscordMessage]:
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
 
@@ -421,17 +444,30 @@ class Client:
         headers = {
             "authorization": self._secret_token
         }
+        async with aiohttp.ClientSession(connector=self._session_connector) as session:
+            session.headers['authorization'] = self._secret_token
 
-        async with self._session.get(url, data=payload, headers=headers, params=querystring) as response:
-            if response.status == 200:
-                response_text = None
-                try:
-                    response_text = await response.json()
-                    return [DiscordMessage(json_data) for json_data in response_text]
-                except Exception:
-                    pass
-                raise DiscordRequestError(
-                    f"Ошибка при получении сообщений: {response_text}. Код ошибки: {response.status}")
-            else:
-                raise DiscordRequestError(
-                    f"Ошибка при получении сообщений. Статус ошибки: {response.status}: {await response.text()}")
+            async with session.get(url, data=payload, headers=headers, params=querystring) as response:
+                if response.status == 200:
+                    response_text = None
+                    try:
+                        response_text = await response.json()
+                        return [DiscordMessage(json_data) for json_data in response_text]
+                    except Exception:
+                        pass
+                    raise DiscordRequestError(
+                        f"Ошибка при получении сообщений: {response_text}. Код ошибки: {response.status}")
+                else:
+                    raise DiscordRequestError(
+                        f"Ошибка при получении сообщений. Статус ошибки: {response.status}: {await response.text()}")
+    async def _check_ip(self):
+        async with aiohttp.ClientSession(connector=self._session_connector) as session_2:
+            # главное сюда 'session.headers['authorization'] = self._secret_token' не поставьте :)
+            async with session_2.get("http://icanhazip.com") as response:
+                if response.status == 200:
+                    text = await response.text()
+                    print("ip:", text)
+                    return text
+                else:
+                    raise DiscordRequestError(
+                        f"Ошибка при получении IP. Статус ошибки: {response.status}: {await response.text()}")
