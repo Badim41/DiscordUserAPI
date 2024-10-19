@@ -198,7 +198,7 @@ class Client:
             session.headers['authorization'] = self._secret_token
 
             async with session.post(url, headers=headers, json=payload) as response:
-                self._session.headers['authorization'] = self._secret_token
+                session.headers['authorization'] = self._secret_token
                 if response.status == 200:
                     try:
                         response_json = await response.json()

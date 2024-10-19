@@ -42,13 +42,15 @@ class CapchaSolver:
         self.proxies = proxies
         self.reka_api = Reka_API(app_session_reka, proxies=self.proxies)
         self.account = ChatHubAPI()
+        # result = self.account.ask_gpt(prompt="What is it?")
+        # print("Test result:", result)
 
-    @staticmethod
-    def download_capcha(image_url, image_path):
+    # @staticmethod
+    def download_capcha(self, image_url, image_path):
         try:
-            response = requests.get(image_url)
+            response = requests.get(image_url, proxies=self.proxies)
             response.raise_for_status()
-            Image.open(BytesIO(response.content)).save(image_path)
+            Image.open(BytesIO(response.content)).save(image_path, 'PNG')
         except Exception as e:
             print(f"Ошибка при загрузке или открытии изображения с {image_url}: {e}")
             raise CapchaDownloadError

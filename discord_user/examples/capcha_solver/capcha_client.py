@@ -19,8 +19,7 @@ app_session_reka = secret.reka_session # TODO set app_session_reka
 guild_id = secret.test_guild_id # TODO set guild_id
 channel_id = secret.test_channel_id # TODO set channel_id
 
-
-client = discord_user.Client(secret_token=auth_token_discord, device=ClientDevice.android)
+client = discord_user.Client(secret_token=auth_token_discord, device=ClientDevice.android, proxy_uri=secret.proxy)
 
 json_data_up_1 = {"type": 2, "application_id": "464272403766444044", "guild_id": guild_id,
                   "channel_id": channel_id, "session_id": "de65ecd11b06f7454732482769257079",
@@ -61,8 +60,7 @@ json_data_bump_1 = {"type": 2, "application_id": "315926021457051650", "guild_id
                                                                     "name_localized": "bump"}, "attachments": []},
                     "nonce": "1267360098796175360", "analytics_location": "slash_ui"}
 
-proxy_uri = "socks5://localhost:5051"
-proxies = {'http': proxy_uri, 'https': proxy_uri}
+proxies = {'http': secret.proxy, 'https': secret.proxy}
 
 last_images = {}
 error_dump_in_row = 0
@@ -102,6 +100,18 @@ async def on_start():
             "start": int(datetime.datetime.now().timestamp()) * 1000
         }
     }
+    # json_data = {
+    #     'id': 'ed52e7003b57bc8',
+    #     'created_at': int(datetime.datetime.now().timestamp()) * 1000,
+    #     'name': '🍰 день рождения Пили',
+    #     'type': ActivityType.WATCHING,
+    #     'assets': {
+    #         'large_image': 'mp:external/j8sfViQeduN4y5cLTWVC4gaey2uHg_gRzcoHm2jywwc/https/yellowfire.ru/uploaded_files/pat_pat_peely.gif?width=140&height=140'
+    #     },
+    #     "timestamps": {
+    #         "start": int(datetime.datetime.now().timestamp()) * 1000
+    #     },
+    # }
 
     activity = Activity.from_json(json_data)
 
@@ -139,7 +149,7 @@ async def on_message(message: DiscordMessage):
         await client.use_slash_command(command)
 
 
-async def solve_up(slash_command_message: SlashCommandMessage, attempts=15):
+async def solve_up(slash_command_message: SlashCommandMessage, attempts=5):
     global last_images, error_up_in_row
     first_embed = slash_command_message.embeds[0]
     if first_embed.image.url:
@@ -178,7 +188,7 @@ async def solve_up(slash_command_message: SlashCommandMessage, attempts=15):
                 try:
                     test_text = f"Я думаю: {capcha_code}: {capcha_url}"
                     print("/up:", test_text)
-                    await client.send_message(chat_id=channel_id, text=f"Я думаю")
+                    await client.send_message(chat_id=channel_id, text=f"Я думаю {capcha_code}: {capcha_url}")
                 except:
                     print("error in send message in /up")
 
@@ -195,7 +205,7 @@ async def solve_up(slash_command_message: SlashCommandMessage, attempts=15):
                 print(f"temp error in solve /up: {e}")
                 command = SlashCommand.from_dict(json_data_up_1, session_id=client.info.session_id)
                 await client.use_slash_command(command)
-    elif "неверен" in first_embed.description:
+    elif "неверен" in first_embed.description or "Срок действия кода истёк" in first_embed.description:
         try:
             error_text = f"/up неуспешен: {first_embed.description}, {first_embed.footer.text}"
             await client.send_message(chat_id=channel_id, text=error_text)
@@ -211,7 +221,7 @@ async def solve_up(slash_command_message: SlashCommandMessage, attempts=15):
         print(f"Ответ [/up]: {first_embed.description}")
 
 
-async def solve_dump(slash_command_message: SlashCommandMessage, attempts=15):
+async def solve_dump(slash_command_message: SlashCommandMessage, attempts=5):
     global last_images, error_dump_in_row
     first_embed = slash_command_message.embeds[0]
     if first_embed.image.url:
