@@ -54,8 +54,10 @@ class Activity:
     
     """
 
-    def __init__(self, state: str, name: str, type: int, id=None, details=None, url=None, assets=None, created_at=None,
-                 timestamps=None, secrets=None, emoji=None):
+    def __init__(self, state: str, name: str, type: int, id=None, details=None, url=None, assets=None,
+                 created_at=None,
+                 timestamps=None, secrets=None, emoji=None, session_id=None, application_id=None, platform=None,
+                 party=None, metadata=None):
         self.id = id
         self.created_at = created_at
         self.details = details
@@ -67,6 +69,11 @@ class Activity:
         self.timestamps = timestamps
         self.secrets = secrets
         self.emoji = emoji
+        self.session_id = session_id
+        self.application_id = application_id
+        self.platform = platform
+        self.party = party
+        self.metadata = metadata
 
     @staticmethod
     def from_json(json_data):
@@ -81,8 +88,16 @@ class Activity:
         assets = json_data.get('assets')
         secrets = json_data.get('secrets')
         timestamps = json_data.get('timestamps')
+        emoji = json_data.get('emoji')
+        session_id = json_data.get('session_id')
+        application_id = json_data.get('application_id')
+        platform = json_data.get('platform')
+        party = json_data.get('party')
+        metadata = json_data.get('metadata')
         return Activity(id=id, details=details, state=state, name=name, type=type, url=url, assets=assets,
-                        created_at=created_at, secrets=secrets, timestamps=timestamps)
+                        created_at=created_at, secrets=secrets, timestamps=timestamps, emoji=emoji,
+                        session_id=session_id, application_id=application_id, platform=platform, party=party,
+                        metadata=metadata)
 
     def to_dict(self):
         data = {}
@@ -108,6 +123,16 @@ class Activity:
             data['timestamps'] = self.timestamps
         if self.emoji is not None:
             data['emoji'] = self.emoji
+        if self.session_id is not None:
+            data['session_id'] = self.session_id
+        if self.application_id is not None:
+            data['application_id'] = self.application_id
+        if self.platform is not None:
+            data['platform'] = self.platform
+        if self.party is not None:
+            data['party'] = self.party
+        if self.metadata is not None:
+            data['metadata'] = self.metadata
 
         return data
 
@@ -151,7 +176,7 @@ class CustomStatus(Activity):
             self,
             state: str,
             end: int = None,
-            emoji:str=None,
+            emoji: str = None,
     ):
         """
         state - текст статуса
@@ -207,6 +232,7 @@ class SimpleStatus(Activity):
         # Инициализируем Activity с помощью родительского конструктора
         super().__init__(id=id, details=details, state=state, name=name, type=type, url=url, assets=assets,
                          created_at=created_at, secrets=secrets, timestamps=timestamps)
+
 
 class NoActivity(Activity):
     def __init__(self):
