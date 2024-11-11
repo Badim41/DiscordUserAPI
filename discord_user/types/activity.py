@@ -54,10 +54,9 @@ class Activity:
     
     """
 
-    def __init__(self, state: str, name: str, type: int, id=None, details=None, url=None, assets=None,
-                 created_at=None,
+    def __init__(self, state: str, name: str, type: int, id=None, details=None, url=None, assets=None, created_at=None,
                  timestamps=None, secrets=None, emoji=None, session_id=None, application_id=None, platform=None,
-                 party=None, metadata=None):
+                 party=None, metadata=None, buttons=None):
         self.id = id
         self.created_at = created_at
         self.details = details
@@ -74,10 +73,10 @@ class Activity:
         self.platform = platform
         self.party = party
         self.metadata = metadata
+        self.buttons = buttons
 
     @staticmethod
     def from_json(json_data):
-        # print("Activity:", json_data)
         type = json_data.get('type')
         state = json_data.get('state')
         name = json_data.get('name')
@@ -94,10 +93,12 @@ class Activity:
         platform = json_data.get('platform')
         party = json_data.get('party')
         metadata = json_data.get('metadata')
+        buttons = json_data.get('buttons')
+
         return Activity(id=id, details=details, state=state, name=name, type=type, url=url, assets=assets,
                         created_at=created_at, secrets=secrets, timestamps=timestamps, emoji=emoji,
                         session_id=session_id, application_id=application_id, platform=platform, party=party,
-                        metadata=metadata)
+                        metadata=metadata, buttons=buttons)
 
     def to_dict(self):
         data = {}
@@ -133,6 +134,8 @@ class Activity:
             data['party'] = self.party
         if self.metadata is not None:
             data['metadata'] = self.metadata
+        if self.buttons is not None:
+            data['buttons'] = self.buttons
 
         return data
 
