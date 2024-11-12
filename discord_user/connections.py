@@ -5,6 +5,7 @@ import traceback
 
 import aiohttp
 import websockets
+from aiohttp import ClientWebSocketResponse
 from aiohttp_socks import ProxyConnector
 
 
@@ -12,7 +13,7 @@ class ConnectionState:
     def __init__(self, secret_token, handler_method, status, device, afk, proxy_uri, activity):
         self._secret_token = secret_token
         self._handler_method = handler_method
-        self.websocket = None
+        self.websocket: ClientWebSocketResponse = None
         self._heartbeat_interval = None
         self._device = device
         self._status = status

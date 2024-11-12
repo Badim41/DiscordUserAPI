@@ -136,6 +136,7 @@ class Activity:
             data['metadata'] = self.metadata
         if self.buttons is not None:
             data['buttons'] = self.buttons
+        data["flags"] = 1
 
         return data
 
