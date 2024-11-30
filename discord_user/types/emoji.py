@@ -22,7 +22,10 @@ class Emoji:
             self.animated = False
 
     def get_url(self):
-        return f"https://cdn.discordapp.com/emojis/{self.id}.webp?size=4096"
+        if self.animated:
+            return f"https://cdn.discordapp.com/emojis/{self.id}.gif?animated=true"
+        else:
+            return f"https://cdn.discordapp.com/emojis/{self.id}.webp?size=4096"
 
     @staticmethod
     def from_str(emoji_str):
