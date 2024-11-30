@@ -28,15 +28,25 @@ class Emoji:
     def from_str(emoji_str):
         emoji = Emoji()
 
-        pattern = r'<:(\w+):(\d+)>'
-        match = re.match(pattern, emoji_str)
-        if match:
-            emoji.name = match.group(1)  # Имя эмоджи
-            emoji.id = match.group(2)  # ID эмоджи
+        pattern_2 = r"<(a?):(\w+):(\d+)>"
+
+        match_2 = re.search(pattern_2, emoji_str)
+        if match_2:
+            emoji.animated = bool(match_2.group(1))  # Если "a" есть, это анимированный эмодзи
+            emoji.name = match_2.group(2)  # Имя эмоджи
+            emoji.id = match_2.group(3)  # ID эмоджи
         else:
-            raise ValueError("Строка не соответствует формату <:Имя:ID>")
+            emoji.name = None
+            emoji.id = None
+            emoji.animated = False
 
         return emoji
 
     def __repr__(self):
-        return f"Emoji(name={self.name}, id={self.id})"
+        return f"Emoji(name={self.name}, id={self.id}, animated={self.animated})"
+
+if __name__ == '__main__':
+    str_1 = "hi <a:Poppop_Faradey:1296351664411770892> 123"
+    print(Emoji.from_str(str_1))
+    str_2 = "hi <:Poppop_Faradey:1296351664411770892> 123"
+    print(Emoji.from_str(str_2))
