@@ -20,6 +20,7 @@ class ConnectionState:
         self._activity = activity
         self._afk = afk
         self._proxy_uri = proxy_uri
+        self._message_queue = asyncio.Queue(maxsize=100)
 
     async def _send_heartbeat(self):
         await asyncio.sleep(3)
@@ -38,6 +39,13 @@ class ConnectionState:
                 await asyncio.sleep(3)
                 print("No heartbeat!")
 
+    async def _process_messages(self):
+        while True:
+            data = await self._message_queue.get()
+            try:
+                await self._handler_method(data)
+            finally:
+                self._message_queue.task_done()
     async def connect(self):
         uri = "wss://gateway.discord.gg/?v=6&encoding=json"
         session_timeout = aiohttp.ClientTimeout(total=60)
@@ -71,7 +79,7 @@ class ConnectionState:
         asyncio.create_task(self._send_heartbeat())
         while True:
             message = await self.websocket.receive()
-            asyncio.create_task(self._handler_method(message.data)) # async support
+            await self._message_queue.put(message.data) # async support
 
     async def identify(self):
         identify_payload = {
