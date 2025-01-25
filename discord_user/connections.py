@@ -71,8 +71,7 @@ class ConnectionState:
         asyncio.create_task(self._send_heartbeat())
         while True:
             message = await self.websocket.receive()
-            # print("message.data", message.data)
-            await self._handler_method(message.data)
+            asyncio.create_task(self._handler_method(message.data)) # async support
 
     async def identify(self):
         identify_payload = {
