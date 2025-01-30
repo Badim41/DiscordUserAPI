@@ -69,6 +69,8 @@ class ConnectionState:
 
     async def _listen(self):
         asyncio.create_task(self._send_heartbeat())
+        print("start listen!")
+        first_receive = False
         while True:
             try:
                 message = await self.websocket.receive()
@@ -77,6 +79,9 @@ class ConnectionState:
                 await self._handler_method(None)
                 await asyncio.sleep(10)
                 continue
+            if not first_receive:
+                print(f"start listen: {message.data[:250]}")
+                first_receive = True
                 # await self._message_queue.put(None)
             # await self._message_queue.put(message.data) # async support
             await self._handler_method(message.data)
