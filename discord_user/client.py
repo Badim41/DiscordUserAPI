@@ -70,6 +70,7 @@ class Client:
         self._connection = ConnectionState(secret_token=self._secret_token, handler_method=self._handle_ws_event,
                                            status=self._status, device=self._device, afk=self._afk,
                                            proxy_uri=self._proxy_uri, activity=self._activity)
+        # asyncio.create_task(self._connection._process_messages())
         await self._connection.connect()
 
     def event_handler(self, event_code):

@@ -5,6 +5,7 @@ import traceback
 
 import aiohttp
 import websockets
+from .global_logger import _log
 from aiohttp import ClientWebSocketResponse
 from aiohttp_socks import ProxyConnector
 
@@ -37,7 +38,6 @@ class ConnectionState:
             else:
                 await asyncio.sleep(3)
                 print("No heartbeat!")
-
     async def connect(self):
         uri = "wss://gateway.discord.gg/?v=6&encoding=json"
         session_timeout = aiohttp.ClientTimeout(total=60)
@@ -70,8 +70,15 @@ class ConnectionState:
     async def _listen(self):
         asyncio.create_task(self._send_heartbeat())
         while True:
-            message = await self.websocket.receive()
-            # print("message.data", message.data)
+            try:
+                message = await self.websocket.receive()
+            except Exception as e:
+                _log.warning(f"Error in get message websocket: {e}\nReturn None ...")
+                await self._handler_method(None)
+                await asyncio.sleep(10)
+                continue
+                # await self._message_queue.put(None)
+            # await self._message_queue.put(message.data) # async support
             await self._handler_method(message.data)
 
     async def identify(self):
