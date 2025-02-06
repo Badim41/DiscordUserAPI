@@ -21,70 +21,64 @@ class ConnectionState:
         self._activity = activity
         self._afk = afk
         self._proxy_uri = proxy_uri
+        self._reconnect_delay = 3
 
     async def _send_heartbeat(self):
         await asyncio.sleep(3)
         d_num = 23
-        while True:
+        while self.websocket and not self.websocket.closed:
             if self._heartbeat_interval:
                 await asyncio.sleep(self._heartbeat_interval / 1000 + random.random())
-
                 heartbeat_payload = {"op": 1, "d": d_num}
-                # print("send heartbeat", heartbeat_payload)
-
-                await self.websocket.send_json(heartbeat_payload)
-
+                try:
+                    await self.websocket.send_json(heartbeat_payload)
+                except Exception as e:
+                    print(f"Heartbeat error: {e}")
+                    break  # Если ошибка, прерываем цикл
                 d_num += random.randint(13, 17)  # честно не знаю как он считает
             else:
                 await asyncio.sleep(3)
                 print("No heartbeat!")
+
     async def connect(self):
-        uri = "wss://gateway.discord.gg/?v=6&encoding=json"
-        session_timeout = aiohttp.ClientTimeout(total=60)
+        while True:  # для автоматического переподключения
+            uri = "wss://gateway.discord.gg/?v=6&encoding=json"
+            session_timeout = aiohttp.ClientTimeout(total=60)
+            connector = ProxyConnector.from_url(self._proxy_uri) if self._proxy_uri else aiohttp.TCPConnector()
+            session = aiohttp.ClientSession(connector=connector, timeout=session_timeout)
 
-        if self._proxy_uri:
-            connector = ProxyConnector.from_url(self._proxy_uri)
-        else:
-            connector = aiohttp.TCPConnector()
-
-        session = aiohttp.ClientSession(connector=connector, timeout=session_timeout)
-
-        try:
-            print(f"Connecting to {uri} with proxy {self._proxy_uri}" if self._proxy_uri else f"Connecting to {uri} without proxy")
-            async with session.ws_connect(uri, max_msg_size=2 ** 40) as websocket:
-                print("Connected to websocket")
-                self.websocket = websocket
-                await self.identify()
-                await self._listen()
-        except aiohttp.ClientConnectorError as e:
-            print(f"Connection error: {e}")
-        except aiohttp.ServerDisconnectedError as e:
-            print(f"Server disconnected: {e}")
-        except Exception as e:
-            print(f"An error occurred: {e}")
-            traceback.print_exc()
-        finally:
-            await session.close()
-            print("Session closed")
+            try:
+                print(
+                    f"Connecting to {uri} with proxy {self._proxy_uri}" if self._proxy_uri else f"Connecting to {uri} without proxy")
+                async with session.ws_connect(uri, max_msg_size=2 ** 40) as websocket:
+                    print("Connected to websocket")
+                    self.websocket = websocket
+                    await self.identify()
+                    await self._listen()
+            except (aiohttp.ClientConnectorError, aiohttp.ServerDisconnectedError) as e:
+                print(f"Connection error: {e}")
+            except Exception as e:
+                print(f"Unexpected error: {e}")
+                traceback.print_exc()
+            finally:
+                await session.close()
+                print("Session closed. Reconnecting...")
+                await asyncio.sleep(self._reconnect_delay)
 
     async def _listen(self):
         asyncio.create_task(self._send_heartbeat())
-        print("start listen!")
-        first_receive = False
-        while True:
+        print("Start listening!")
+        while self.websocket and not self.websocket.closed:
             try:
                 message = await self.websocket.receive()
+                if message.type in (aiohttp.WSMsgType.CLOSED, aiohttp.WSMsgType.ERROR):
+                    print("WebSocket closed or error occurred")
+                    break
+                await self._handler_method(message.data)
             except Exception as e:
-                _log.warning(f"Error in get message websocket: {e}\nReturn None ...")
-                await self._handler_method(None)
-                await asyncio.sleep(10)
-                continue
-            if not first_receive:
-                print(f"start listen: {message.data[:250]}")
-                first_receive = True
-                # await self._message_queue.put(None)
-            # await self._message_queue.put(message.data) # async support
-            await self._handler_method(message.data)
+                print(f"Error receiving message: {e}")
+                break
+        print("WebSocket connection lost. Reconnecting...")
 
     async def identify(self):
         identify_payload = {
