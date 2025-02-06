@@ -8,7 +8,7 @@ console_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(level
 
 # Инициализируем логгер и добавляем хендлер
 _log = logging.getLogger(__name__)
-_log.setLevel(logging.DEBUG)
+_log.setLevel(logging.ERROR)
 _log.addHandler(console_handler)
 
 # Отключаем пропагирование сообщений на более высокие уровни
