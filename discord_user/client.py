@@ -136,8 +136,8 @@ class Client:
 
                 if event == 'READY':
                     _log.log(msg=f"Уровень логирования: {_log.level}", level=_log.level)
+                    self.info = SelfUserInfo(event_data)
                     for handler in self._on_start_handler:
-                        self.info = SelfUserInfo(event_data)
                         await handler()
                 elif event == 'MESSAGE_UPDATE':
                     for handler in self._message_update_handlers:
@@ -284,6 +284,7 @@ class Client:
     async def change_activity(self, activity: Activity, status: str):
         if status not in PresenceStatus.status_list:
             raise TypeError(f"status должен быть одним из {PresenceStatus.status_list}")
+        # {"op":3,"d":{"status":"online","since":0,"activities":[{"name":"Custom Status","type":4,"state":"ТЕСТ СТАТУС","timestamps":{"end":1738929599999},"emoji":null}],"afk":false}}
         activity_json = {
             "op": 3,
             "d": {
@@ -293,7 +294,7 @@ class Client:
                 "afk": self._afk
             }
         }
-        # print("set activity:", activity.to_dict())
+        print("set activity:", activity.to_dict())
         await self._connection.websocket.send_json(activity_json)
 
     async def send_voice(self, chat_id, audio_path) -> DiscordMessage:
