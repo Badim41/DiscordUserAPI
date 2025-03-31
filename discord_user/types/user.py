@@ -6,6 +6,7 @@ from .guild import Guild
 class User:
     def __init__(self, json_data):
         # print("USER DATA:", json_data)
+        self._data = json_data
         self.username: str = json_data.get("username", None)
         self.id: str = json_data.get("id", None)
         self.public_flags: int = json_data.get("public_flags", 0)

@@ -15,6 +15,7 @@ class Sticker:
 
         {'name': 'Sup', 'id': '816087792291282944', 'format_type': 3}
         """
+        self._data = json_data
         self.name = json_data['name']
         self.id = json_data['id']
         self.format_type = json_data['format_type']

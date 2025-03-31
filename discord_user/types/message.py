@@ -4,6 +4,7 @@ from ..types import Sticker
 
 class DiscordMessage:
     def __init__(self, data):
+        self._data = data
         self.type = data.get('type')
         self.tts = data.get('tts')
         self.timestamp = data.get('timestamp')

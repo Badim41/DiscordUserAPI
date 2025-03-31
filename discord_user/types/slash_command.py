@@ -147,6 +147,7 @@ class SlashCommandMessage:
     """
 
     def __init__(self, json_data):
+        self._data = json_data
         _log.log(msg=f"slash data: {json_data}",level=logging.DEBUG)
         self.webhook_id = json_data.get('webhook_id')
         self.type = json_data.get('type')
