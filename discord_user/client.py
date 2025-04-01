@@ -399,7 +399,7 @@ class Client:
             session.headers['authorization'] = self._secret_token
 
             async with session.post(url, headers=headers, data=payload) as response:
-                if response.status == 200:
+                if response.status == 204:
                     return response.status
                 else:
                     raise DiscordRequestError(
