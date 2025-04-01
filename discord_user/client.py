@@ -179,13 +179,15 @@ class Client:
             traceback.print_exc()
 
     # ================== attachments =========================
-    async def _get_upload_url(self, channel_id, file_path):
+    async def _get_upload_url(self, channel_id, file_path:str):
         url = f"https://discord.com/api/v9/channels/{channel_id}/attachments"
 
         files = [
             {
                 "filename": os.path.basename(file_path),
-                "file_size": os.path.getsize(file_path)}
+                "file_size": os.path.getsize(file_path),
+                "is_clip": False
+            }
         ]
 
         payload = {
@@ -386,7 +388,22 @@ class Client:
                 else:
                     raise DiscordRequestError(
                         f"Ошибка при отправке сообщения. Статус ошибки: {response.status}: {await response.text()}")
+    async def send_typing(self, chat_id) -> int:
+        url = f"https://discord.com/api/v9/channels/{chat_id}/typing"
+        payload = ""
+        headers = {
+            "authorization": self._secret_token
+        }
 
+        async with aiohttp.ClientSession(connector=self._session_connector) as session:
+            session.headers['authorization'] = self._secret_token
+
+            async with session.post(url, headers=headers, data=payload) as response:
+                if response.status == 200:
+                    return response.status
+                else:
+                    raise DiscordRequestError(
+                        f"Ошибка при отправке typing. Статус ошибки: {response.status}: {await response.text()}")
     async def delete_message(self, chat_id, message_id):
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}"
 
