@@ -1,5 +1,4 @@
 import json
-import os
 import traceback
 import zlib
 from typing import List
@@ -7,8 +6,8 @@ from typing import List
 import aiofiles
 import aiohttp
 from aiohttp_socks import ProxyConnector
-from discord_user.types import Emoji
 
+from discord_user.types import Emoji
 from .connections import ConnectionState
 from .errors import DiscordRequestError, InvalidTokenError
 from .global_logger import _log
@@ -59,12 +58,14 @@ class Client:
         # self._session.proxies = {'http': self._proxy_uri, 'https': self._proxy_uri}
 
         self.info: SelfUserInfo = None
+
     @property
     def _session_connector(self):
         if self._proxy_uri:
             return ProxyConnector.from_url(self._proxy_uri)
         else:
             return aiohttp.TCPConnector()
+
     # Декораторы для регистрации обработчиков
     async def start_polling(self):
         self._connection = ConnectionState(secret_token=self._secret_token, handler_method=self._handle_ws_event,
@@ -179,7 +180,7 @@ class Client:
             traceback.print_exc()
 
     # ================== attachments =========================
-    async def _get_upload_url(self, channel_id, file_path:str):
+    async def _get_upload_url(self, channel_id, file_path: str):
         url = f"https://discord.com/api/v9/channels/{channel_id}/attachments"
 
         files = [
@@ -279,7 +280,8 @@ class Client:
                         text = await response.json()
                     except Exception:
                         pass
-                    raise DiscordRequestError(f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status}")
+                    raise DiscordRequestError(
+                        f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status}")
 
                 # print("interactions SUCCESS", await response.text())
 
@@ -347,7 +349,8 @@ class Client:
                     raise DiscordRequestError(
                         f"Ошибка при отправке аудио. Статус ошибки: {response.status}: {await response.text()}")
 
-    async def send_message(self, chat_id, text="", file_path=None) -> DiscordMessage:
+    async def send_message(self, chat_id, text="", file_path=None, reply_message: DiscordMessage = None,
+                           replied_user=False) -> DiscordMessage:
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
 
         payload = {
@@ -358,6 +361,14 @@ class Client:
             "tts": False,
             "flags": 0
         }
+        if reply_message:
+            payload["message_reference"] = {
+                "channel_id": reply_message.channel_id,
+                "message_id": reply_message.message_id
+            }
+            if reply_message.guild_id:
+                payload["message_reference"]["guild_id"] = reply_message.guild_id
+            payload["allowed_mentions"] = {"parse": ["users", "roles", "everyone"], "replied_user": replied_user}
         headers = {
             "authorization": self._secret_token
         }
@@ -388,6 +399,7 @@ class Client:
                 else:
                     raise DiscordRequestError(
                         f"Ошибка при отправке сообщения. Статус ошибки: {response.status}: {await response.text()}")
+
     async def send_typing(self, chat_id) -> int:
         url = f"https://discord.com/api/v9/channels/{chat_id}/typing"
         payload = ""
@@ -404,6 +416,7 @@ class Client:
                 else:
                     raise DiscordRequestError(
                         f"Ошибка при отправке typing. Статус ошибки: {response.status}: {await response.text()}")
+
     async def delete_message(self, chat_id, message_id):
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}"
 
@@ -419,11 +432,12 @@ class Client:
                 else:
                     raise DiscordRequestError(
                         f"Ошибка при удалении сообщения. Статус ошибки: {response.status}: {await response.text()}")
-    async def set_reaction(self, chat_id, message_id, reaction:[Emoji, str]):
+
+    async def set_reaction(self, chat_id, message_id, reaction: [Emoji, str]):
         if isinstance(reaction, str):
             emoji_str = reaction
         elif isinstance(reaction, Emoji):
-            emoji_str = f"{reaction.name}:{reaction.id}/0" # tatar:769298493922607187/0
+            emoji_str = f"{reaction.name}:{reaction.id}/0"  # tatar:769298493922607187/0
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}/reactions/{emoji_str}/@me?location=Message Reaction Picker&type=0"
 
         headers = {
@@ -439,11 +453,11 @@ class Client:
                     raise DiscordRequestError(
                         f"Ошибка при установки реакции. Статус ошибки: {response.status}: {await response.text()}")
 
-    async def remove_reaction(self, chat_id, message_id, reaction:[Emoji, str]):
+    async def remove_reaction(self, chat_id, message_id, reaction: [Emoji, str]):
         if isinstance(reaction, str):
             emoji_str = reaction
         elif isinstance(reaction, Emoji):
-            emoji_str = f"{reaction.name}:{reaction.id}/0" # tatar:769298493922607187/0
+            emoji_str = f"{reaction.name}:{reaction.id}/0"  # tatar:769298493922607187/0
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}/reactions/{emoji_str}/@me?location=Message Inline Button&burst=false"
 
         headers = {
@@ -454,11 +468,12 @@ class Client:
 
             async with session.delete(url, headers=headers) as response:
                 if response.status == 204:
-                        return
+                    return
                 else:
                     raise DiscordRequestError(
                         f"Ошибка при удалении реакции. Статус ошибки: {response.status}: {await response.text()}")
-    async def get_messages(self,chat_id, limit:[int,str]=50) -> List[DiscordMessage]:
+
+    async def get_messages(self, chat_id, limit: [int, str] = 50) -> List[DiscordMessage]:
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
 
         querystring = {"limit": str(limit)}
@@ -484,6 +499,7 @@ class Client:
                 else:
                     raise DiscordRequestError(
                         f"Ошибка при получении сообщений. Статус ошибки: {response.status}: {await response.text()}")
+
     async def _check_ip(self):
         async with aiohttp.ClientSession(connector=self._session_connector) as session_2:
             # главное сюда 'session.headers['authorization'] = self._secret_token' не поставьте :)
