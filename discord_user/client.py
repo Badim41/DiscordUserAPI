@@ -4,8 +4,7 @@ import zlib
 from typing import List
 
 import aiofiles
-import aiohttp
-from aiohttp_socks import ProxyConnector
+import httpx
 
 from discord_user.types import Emoji
 from .connections import ConnectionState
@@ -67,16 +66,16 @@ class Client:
         self._afk: bool = afk
         self._proxy_uri: str = proxy_uri
         # self._session = None
-        # self._session.proxies = {'http': self._proxy_uri, 'https': self._proxy_uri}
+        self.proxies = {'http': self._proxy_uri, 'https': self._proxy_uri}
 
         self.info: SelfUserInfo = None
 
-    @property
-    def _session_connector(self):
-        if self._proxy_uri:
-            return ProxyConnector.from_url(self._proxy_uri)
-        else:
-            return aiohttp.TCPConnector()
+    # @property
+    # def _session_connector(self):
+    #     if self._proxy_uri:
+    #         return ProxyConnector.from_url(self._proxy_uri)
+    #     else:
+    #         return aiohttp.TCPConnector(ssl=True, force_close=False)
 
     # Декораторы для регистрации обработчиков
     async def start_polling(self):
@@ -206,7 +205,11 @@ class Client:
         payload = {
             "files": files
         }
-        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+        async with httpx.AsyncClient(
+                http2=True,
+                headers=self._discord_headers,
+                proxies=self.proxies
+        ) as session:
             async with session.post(url, headers=self._discord_headers, json=payload) as response:
                 if response.status == 200:
                     try:
@@ -224,31 +227,38 @@ class Client:
 
     async def _create_attachment(self, channel_id, file_path, mimetype=None):
         filename = os.path.basename(file_path)
-        form_data = aiohttp.FormData()
 
-        # Чтение аудиофайла для отправки
         if not mimetype:
             mimetype = get_mimetype(file_path)
-            # print("mimetype", mimetype)
 
+        # Чтение файла
         async with aiofiles.open(file_path, 'rb') as f:
             audio_data = await f.read()
-            form_data.add_field('file', audio_data, filename=filename, content_type=mimetype)
 
+        # Получение URL для загрузки
         json_data_upload = await self._get_upload_url(channel_id=channel_id, file_path=file_path)
         upload_url = json_data_upload['attachments'][0]['upload_url']
 
-        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
-            async with session.put(upload_url, headers=self._discord_headers, data=form_data) as response:
-                if response.status == 200:
-                    try:
-                        await response.text()
-                        return json_data_upload
-                    except Exception as e:
-                        raise DiscordRequestError(f"Ошибка при обработке ответа: {e}")
-                else:
-                    raise DiscordRequestError(
-                        f"Ошибка при создания attachment. Статус ошибки: {response.status}: {await response.text()}")
+        # Формирование multipart файлового запроса
+        files = {
+            "file": (filename, audio_data, mimetype)
+        }
+
+        async with httpx.AsyncClient(
+                http2=True,
+                headers=self._discord_headers,
+                proxies=self.proxies
+        ) as client:
+            response = await client.put(upload_url, headers=self._discord_headers, files=files)
+
+            if response.status_code == 200:
+                # Здесь можно дополнительно обработать текст ответа, если требуется
+                _ = response.text  # если нужно прочитать ответ
+                return json_data_upload
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при создании attachment. Статус ошибки: {response.status_code}: {response.text}"
+                )
 
     # ================== POST REQUESTS =========================
     async def use_slash_command(self, slash_command: SlashCommand, force_multipart_form_data=False):
@@ -267,7 +277,11 @@ class Client:
         # print("payload", payload)
         # print(f"SEND SLASH COMMAND: {json_data}")
 
-        async with aiohttp.ClientSession(connector=self._session_connector, headers=headers) as session:
+        async with httpx.AsyncClient(
+                http2=True,
+                headers=self._discord_headers,
+                proxies=self.proxies
+        ) as session:
             async with session.post(url, headers=headers, data=payload) as response:
                 if response.status != 204:
                     text = None
@@ -328,7 +342,11 @@ class Client:
             }]
         }
 
-        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+        async with httpx.AsyncClient(
+                http2=True,
+                headers=self._discord_headers,
+                proxies=self.proxies
+        ) as session:
             async with session.post(url, headers=self._discord_headers, json=payload) as response:
                 if response.status == 200:
                     try:
@@ -370,7 +388,11 @@ class Client:
             }]
 
         _log.debug(f"payload send_message: {payload}")
-        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+        async with httpx.AsyncClient(
+                http2=True,
+                headers=self._discord_headers,
+                proxies=self.proxies
+        ) as session:
             async with session.post(url, headers=self._discord_headers, json=payload) as response:
                 if response.status == 200:
                     response_text = None
@@ -387,10 +409,13 @@ class Client:
 
     async def send_typing(self, chat_id) -> int:
         url = f"https://discord.com/api/v9/channels/{chat_id}/typing"
-        payload = ""
 
-        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
-            async with session.post(url, headers=self._discord_headers, data=payload) as response:
+        async with httpx.AsyncClient(
+                http2=True,
+                headers=self._discord_headers,
+                proxies=self.proxies
+        ) as session:
+            async with session.post(url, headers=self._discord_headers) as response:
                 if response.status == 204:
                     return response.status
                 else:
@@ -400,7 +425,11 @@ class Client:
     async def delete_message(self, chat_id, message_id):
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}"
 
-        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+        async with httpx.AsyncClient(
+                http2=True,
+                headers=self._discord_headers,
+                proxies=self.proxies
+        ) as session:
             async with session.delete(url, headers=self._discord_headers) as response:
                 if response.status == 204:
                     return
@@ -415,7 +444,11 @@ class Client:
             emoji_str = f"{reaction.name}:{reaction.id}/0"  # tatar:769298493922607187/0
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}/reactions/{emoji_str}/@me?location=Message Reaction Picker&type=0"
 
-        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+        async with httpx.AsyncClient(
+                http2=True,
+                headers=self._discord_headers,
+                proxies=self.proxies
+        ) as session:
             async with session.put(url, headers=self._discord_headers) as response:
                 if response.status == 204:
                     return
@@ -430,7 +463,11 @@ class Client:
             emoji_str = f"{reaction.name}:{reaction.id}/0"  # tatar:769298493922607187/0
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}/reactions/{emoji_str}/@me?location=Message Inline Button&burst=false"
 
-        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+        async with httpx.AsyncClient(
+                http2=True,
+                headers=self._discord_headers,
+                proxies=self.proxies
+        ) as session:
             async with session.delete(url, headers=self._discord_headers) as response:
                 if response.status == 204:
                     return
@@ -445,8 +482,12 @@ class Client:
 
         payload = ""
 
-        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
-            async with session.get(url, data=payload, headers=self._discord_headers, params=querystring) as response:
+        async with httpx.AsyncClient(
+                http2=True,
+                headers=self._discord_headers,
+                proxies=self.proxies
+        ) as session:
+            async with session.get(url, headers=self._discord_headers, params=querystring) as response:
                 if response.status == 200:
                     response_text = None
                     try:
@@ -461,9 +502,12 @@ class Client:
                         f"Ошибка при получении сообщений. Статус ошибки: {response.status}: {await response.text()}")
 
     async def _check_ip(self):
-        async with aiohttp.ClientSession(connector=self._session_connector) as session_2:
+        async with httpx.AsyncClient(
+                http2=True,
+                proxies=self.proxies
+        ) as session:
             # главное сюда 'session.headers['authorization'] = self._secret_token' не поставьте :)
-            async with session_2.get("http://icanhazip.com") as response:
+            async with session.get("http://icanhazip.com") as response:
                 if response.status == 200:
                     text = await response.text()
                     print("ip:", text)
