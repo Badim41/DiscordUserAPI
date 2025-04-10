@@ -5,7 +5,7 @@ setup(
     version='0.12',
     packages=find_packages(),
     install_requires=[
-        'requests=~2.32.0',
+        'requests~=2.32.0',
         'websockets',
         'aiohttp==3.8.6',
         'aiohttp-socks',
