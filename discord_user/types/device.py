@@ -22,17 +22,18 @@ class ClientDevice:
         "os": "Windows",
         "browser": "Chrome",
         "device": "",
-        "system_locale": "ru",
-        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-        "browser_version": "124.0.0.0",
-        "os_version": "10",
-        "referrer": "https://discord.com/",
-        "referring_domain": "discord.com",
+        "system_locale": "ru-RU",
+        "browser_user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36",
+        "browser_version": "135.0.0.0", "os_version": "10",
+        "referrer": "https://www.google.com/",
+        "referring_domain": "www.google.com",
+        "search_engine": "google",
         "referrer_current": "",
         "referring_domain_current": "",
         "release_channel": "stable",
-        "client_build_number": 307828,
-        "client_event_source": None
+        "client_build_number": 388257,
+        "client_event_source": None,
+        "has_client_mods": False
     }
     macos = {
         "os": "Mac OS X",

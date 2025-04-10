@@ -42,7 +42,7 @@ class ConnectionState:
 
     async def connect(self):
         while True:  # для автоматического переподключения
-            uri = "wss://gateway.discord.gg/?v=6&encoding=json"
+            uri = "wss://gateway.discord.gg/?v=9&encoding=json"
             session_timeout = aiohttp.ClientTimeout(total=60)
             connector = ProxyConnector.from_url(self._proxy_uri) if self._proxy_uri else aiohttp.TCPConnector()
             session = aiohttp.ClientSession(connector=connector, timeout=session_timeout)
@@ -84,7 +84,7 @@ class ConnectionState:
             "op": 2,
             "d": {
                 "token": self._secret_token,
-                "capabilities": 30717,
+                "capabilities": 161789,
                 "properties": self._device,
                 "presence": {
                     "status": self._status,

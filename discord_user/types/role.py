@@ -17,22 +17,22 @@ class Role:
           'color': 0
         }
         """
-        self.unicode_emoji = json_data['unicode_emoji']
-        self.tags = json_data['tags']
+        self.unicode_emoji = json_data.get('unicode_emoji')
+        self.tags = json_data.get('tags')
         """
         'tags': {
             'bot_id': '559426966151757824'
             'integration_id': '937790974703308820'
           }
         """
-        self.position = json_data['position']
-        self.permissions_new = json_data['permissions_new']
-        self.permissions = json_data['permissions']
-        self.name = json_data['name']
-        self.mentionable = json_data['mentionable']
-        self.managed = json_data['managed']  # не знаю что это
-        self.id = json_data['id']
-        self.icon = json_data['icon']
-        self.hoist = json_data['hoist']  # не знаю что это
-        self.flags = json_data['flags']
-        self.color = json_data['color']
+        self.position = json_data.get('position')
+        # self.permissions_new = json_data.get('permissions_new')
+        self.permissions = json_data.get('permissions')
+        self.name = json_data.get('name')
+        self.mentionable = json_data.get('mentionable')
+        self.managed = json_data.get('managed')  # не знаю что это
+        self.id = json_data.get('id')
+        self.icon = json_data.get('icon')
+        self.hoist = json_data.get('hoist')  # не знаю что это
+        self.flags = json_data.get('flags')
+        self.color = json_data.get('color')

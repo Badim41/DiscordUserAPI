@@ -1,4 +1,5 @@
 import json
+import time
 import traceback
 import zlib
 from typing import List
@@ -66,9 +67,13 @@ class Client:
         self._afk: bool = afk
         self._proxy_uri: str = proxy_uri
         # self._session = None
-        self.proxies = {'http': self._proxy_uri, 'https': self._proxy_uri}
+        if self._proxy_uri:
+            self.proxies = {'http': self._proxy_uri, 'https': self._proxy_uri}
+        else:
+            self.proxies = None
 
         self.info: SelfUserInfo = None
+        self._last_change_activity_time = 0
 
     # @property
     # def _session_connector(self):
@@ -210,20 +215,20 @@ class Client:
                 headers=self._discord_headers,
                 proxies=self.proxies
         ) as session:
-            async with session.post(url, headers=self._discord_headers, json=payload) as response:
-                if response.status == 200:
-                    try:
-                        response_json = await response.json()
-                        return response_json
-                    except Exception:
-                        raise DiscordRequestError(
-                            f"Ошибка при получении ссылки. Код ошибки: {response.status}"
-                        )
-                else:
-                    response_text = await response.text()
+            response = await session.post(url, headers=self._discord_headers, json=payload)
+            if response.status_code == 200:
+                try:
+                    response_json = response.json()
+                    return response_json
+                except Exception:
                     raise DiscordRequestError(
-                        f"Ошибка при получении ссылки. Статус ошибки: {response.status}: {response_text}"
+                        f"Ошибка при получении ссылки. Код ошибки: {response.status_code}"
                     )
+            else:
+                response_text = response.text
+                raise DiscordRequestError(
+                    f"Ошибка при получении ссылки. Статус ошибки: {response.status_code}: {response_text}"
+                )
 
     async def _create_attachment(self, channel_id, file_path, mimetype=None):
         filename = os.path.basename(file_path)
@@ -282,19 +287,22 @@ class Client:
                 headers=self._discord_headers,
                 proxies=self.proxies
         ) as session:
-            async with session.post(url, headers=headers, data=payload) as response:
-                if response.status != 204:
-                    text = None
-                    try:
-                        text = await response.json()
-                    except Exception:
-                        pass
-                    raise DiscordRequestError(
-                        f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status}")
+            response = await session.post(url, headers=headers, data=payload)
+            if response.status_code != 204:
+                text = None
+                try:
+                    text = response.json()
+                except Exception:
+                    pass
+                raise DiscordRequestError(
+                    f"Ошибка при отправке слэш-команды: {text}. Код ошибки: {response.status_code}")
 
-                # print("interactions SUCCESS", await response.text())
+            # print("interactions SUCCESS", response.text)
 
-    async def change_activity(self, activity: Activity, status: str):
+    async def change_activity(self, activity: Activity, status: str, ignore_limit=False):
+        if not ignore_limit and time.time() - self._last_change_activity_time < 20:
+            return
+        self._last_change_activity_time = time.time()
         if status not in PresenceStatus.status_list:
             raise TypeError(f"status должен быть одним из {PresenceStatus.status_list}")
         # {"op":3,"d":{"status":"online","since":0,"activities":[{"name":"Custom Status","type":4,"state":"ТЕСТ СТАТУС","timestamps":{"end":1738929599999},"emoji":null}],"afk":false}}
@@ -347,15 +355,15 @@ class Client:
                 headers=self._discord_headers,
                 proxies=self.proxies
         ) as session:
-            async with session.post(url, headers=self._discord_headers, json=payload) as response:
-                if response.status == 200:
-                    try:
-                        return DiscordMessage(await response.json())
-                    except Exception as e:
-                        raise DiscordRequestError(f"Ошибка при обработке ответа: {e}")
-                else:
-                    raise DiscordRequestError(
-                        f"Ошибка при отправке аудио. Статус ошибки: {response.status}: {await response.text()}")
+            response = await session.post(url, headers=self._discord_headers, json=payload)
+            if response.status_code == 200:
+                try:
+                    return DiscordMessage(response.json())
+                except Exception as e:
+                    raise DiscordRequestError(f"Ошибка при обработке ответа: {e}")
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при отправке аудио. Статус ошибки: {response.status_code}: {response.text}")
 
     async def send_message(self, chat_id, text="", file_path=None, reply_message: DiscordMessage = None,
                            replied_user=False) -> DiscordMessage:
@@ -393,19 +401,19 @@ class Client:
                 headers=self._discord_headers,
                 proxies=self.proxies
         ) as session:
-            async with session.post(url, headers=self._discord_headers, json=payload) as response:
-                if response.status == 200:
-                    response_text = None
-                    try:
-                        response_text = await response.json()
-                        return DiscordMessage(response_text)
-                    except Exception:
-                        pass
-                    raise DiscordRequestError(
-                        f"Ошибка при отправке сообщения: {response_text}. Код ошибки: {response.status}")
-                else:
-                    raise DiscordRequestError(
-                        f"Ошибка при отправке сообщения. Статус ошибки: {response.status}: {await response.text()}")
+            response = await session.post(url, headers=self._discord_headers, json=payload)
+            if response.status_code == 200:
+                response_text = None
+                try:
+                    response_text = response.json()
+                    return DiscordMessage(response_text)
+                except Exception:
+                    pass
+                raise DiscordRequestError(
+                    f"Ошибка при отправке сообщения: {response_text}. Код ошибки: {response.status_code}")
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при отправке сообщения. Статус ошибки: {response.status_code}: {response.text}")
 
     async def send_typing(self, chat_id) -> int:
         url = f"https://discord.com/api/v9/channels/{chat_id}/typing"
@@ -415,12 +423,12 @@ class Client:
                 headers=self._discord_headers,
                 proxies=self.proxies
         ) as session:
-            async with session.post(url, headers=self._discord_headers) as response:
-                if response.status == 204:
-                    return response.status
-                else:
-                    raise DiscordRequestError(
-                        f"Ошибка при отправке typing. Статус ошибки: {response.status}: {await response.text()}")
+            response = await session.post(url, headers=self._discord_headers)
+            if response.status_code == 204:
+                return response.status_code
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при отправке typing. Статус ошибки: {response.status_code}: {response.text}")
 
     async def delete_message(self, chat_id, message_id):
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}"
@@ -430,12 +438,12 @@ class Client:
                 headers=self._discord_headers,
                 proxies=self.proxies
         ) as session:
-            async with session.delete(url, headers=self._discord_headers) as response:
-                if response.status == 204:
-                    return
-                else:
-                    raise DiscordRequestError(
-                        f"Ошибка при удалении сообщения. Статус ошибки: {response.status}: {await response.text()}")
+            response = await session.delete(url, headers=self._discord_headers)
+            if response.status_code == 204:
+                return
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при удалении сообщения. Статус ошибки: {response.status_code}: {response.text}")
 
     async def set_reaction(self, chat_id, message_id, reaction: [Emoji, str]):
         if isinstance(reaction, str):
@@ -449,12 +457,12 @@ class Client:
                 headers=self._discord_headers,
                 proxies=self.proxies
         ) as session:
-            async with session.put(url, headers=self._discord_headers) as response:
-                if response.status == 204:
-                    return
-                else:
-                    raise DiscordRequestError(
-                        f"Ошибка при установки реакции. Статус ошибки: {response.status}: {await response.text()}")
+            response = await session.put(url, headers=self._discord_headers)
+            if response.status_code == 204:
+                return
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при установки реакции. Статус ошибки: {response.status_code}: {response.text}")
 
     async def remove_reaction(self, chat_id, message_id, reaction: [Emoji, str]):
         if isinstance(reaction, str):
@@ -468,12 +476,12 @@ class Client:
                 headers=self._discord_headers,
                 proxies=self.proxies
         ) as session:
-            async with session.delete(url, headers=self._discord_headers) as response:
-                if response.status == 204:
-                    return
-                else:
-                    raise DiscordRequestError(
-                        f"Ошибка при удалении реакции. Статус ошибки: {response.status}: {await response.text()}")
+            response = await session.delete(url, headers=self._discord_headers)
+            if response.status_code == 204:
+                return
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при удалении реакции. Статус ошибки: {response.status_code}: {response.text}")
 
     async def get_messages(self, chat_id, limit: [int, str] = 50) -> List[DiscordMessage]:
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages"
@@ -487,19 +495,19 @@ class Client:
                 headers=self._discord_headers,
                 proxies=self.proxies
         ) as session:
-            async with session.get(url, headers=self._discord_headers, params=querystring) as response:
-                if response.status == 200:
-                    response_text = None
-                    try:
-                        response_text = await response.json()
-                        return [DiscordMessage(json_data) for json_data in response_text]
-                    except Exception:
-                        pass
-                    raise DiscordRequestError(
-                        f"Ошибка при получении сообщений: {response_text}. Код ошибки: {response.status}")
-                else:
-                    raise DiscordRequestError(
-                        f"Ошибка при получении сообщений. Статус ошибки: {response.status}: {await response.text()}")
+            response = await session.get(url, headers=self._discord_headers, params=querystring)
+            if response.status_code == 200:
+                response_text = None
+                try:
+                    response_text = response.json()
+                    return [DiscordMessage(json_data) for json_data in response_text]
+                except Exception:
+                    pass
+                raise DiscordRequestError(
+                    f"Ошибка при получении сообщений: {response_text}. Код ошибки: {response.status_code}")
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при получении сообщений. Статус ошибки: {response.status_code}: {response.text}")
 
     async def _check_ip(self):
         async with httpx.AsyncClient(
@@ -507,11 +515,11 @@ class Client:
                 proxies=self.proxies
         ) as session:
             # главное сюда 'session.headers['authorization'] = self._secret_token' не поставьте :)
-            async with session.get("http://icanhazip.com") as response:
-                if response.status == 200:
-                    text = await response.text()
-                    print("ip:", text)
-                    return text
-                else:
-                    raise DiscordRequestError(
-                        f"Ошибка при получении IP. Статус ошибки: {response.status}: {await response.text()}")
+            response = await session.get("http://icanhazip.com")
+            if response.status_code == 200:
+                text = response.text
+                print("ip:", text)
+                return text
+            else:
+                raise DiscordRequestError(
+                    f"Ошибка при получении IP. Статус ошибки: {response.status_code}: {response.text}")
