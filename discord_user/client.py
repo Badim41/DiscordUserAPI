@@ -29,7 +29,8 @@ class Client:
             status=PresenceStatus.ONLINE,
             device=ClientDevice.windows,
             afk=False,
-            proxy_uri: str = None
+            proxy_uri: str = None,
+            cookie: str = None
     ):
         """
         :param secret_token: Секретный ключ аккаунта (Bearer <SECRET KEY>)
@@ -38,6 +39,17 @@ class Client:
         :param proxy_uri: str, SOCKS5 прокси
         """
         self._secret_token = secret_token
+        self._discord_headers = {
+            "accept": "*/*",
+            "accept-language": "ru-RU,ru;q=0.9,en-US;q=0.8,en;q=0.7",
+            "authorization": self._secret_token,
+            "origin": "https://discord.com",
+            "pragma": "no-cache",
+            "priority": "u=1, i",
+            "user-agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/135.0.0.0 Safari/537.36"
+        }
+        if cookie:
+            self._discord_headers["cookie"] = cookie
         self._on_start_handler = []
         self._message_handlers = []
         self._slash_command_message_handlers = []
@@ -194,15 +206,8 @@ class Client:
         payload = {
             "files": files
         }
-
-        headers = {
-            "Authorization": self._secret_token
-        }
-        async with aiohttp.ClientSession(connector=self._session_connector) as session:
-            session.headers['authorization'] = self._secret_token
-
-            async with session.post(url, headers=headers, json=payload) as response:
-                session.headers['authorization'] = self._secret_token
+        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+            async with session.post(url, headers=self._discord_headers, json=payload) as response:
                 if response.status == 200:
                     try:
                         response_json = await response.json()
@@ -230,17 +235,11 @@ class Client:
             audio_data = await f.read()
             form_data.add_field('file', audio_data, filename=filename, content_type=mimetype)
 
-        headers = {
-            "authorization": self._secret_token
-        }
-
         json_data_upload = await self._get_upload_url(channel_id=channel_id, file_path=file_path)
         upload_url = json_data_upload['attachments'][0]['upload_url']
 
-        async with aiohttp.ClientSession(connector=self._session_connector) as session:
-            session.headers['authorization'] = self._secret_token
-
-            async with session.put(upload_url, headers=headers, data=form_data) as response:
+        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+            async with session.put(upload_url, headers=self._discord_headers, data=form_data) as response:
                 if response.status == 200:
                     try:
                         await response.text()
@@ -255,9 +254,7 @@ class Client:
     async def use_slash_command(self, slash_command: SlashCommand, force_multipart_form_data=False):
         url = 'https://discord.com/api/v9/interactions'
 
-        headers = {
-            "authorization": self._secret_token
-        }
+        headers = self._discord_headers
 
         json_data = slash_command.to_json()
         if json.loads(json_data).get("type",
@@ -270,9 +267,7 @@ class Client:
         # print("payload", payload)
         # print(f"SEND SLASH COMMAND: {json_data}")
 
-        async with aiohttp.ClientSession(connector=self._session_connector) as session:
-            session.headers['authorization'] = self._secret_token
-
+        async with aiohttp.ClientSession(connector=self._session_connector, headers=headers) as session:
             async with session.post(url, headers=headers, data=payload) as response:
                 if response.status != 204:
                     text = None
@@ -298,7 +293,7 @@ class Client:
                 "afk": self._afk
             }
         }
-        print("set activity:", activity.to_dict())
+        # print("set activity:", activity.to_dict())
         await self._connection.websocket.send_json(activity_json)
 
     async def send_voice(self, chat_id, audio_path) -> DiscordMessage:
@@ -333,13 +328,8 @@ class Client:
             }]
         }
 
-        headers = {
-            "authorization": self._secret_token
-        }
-        async with aiohttp.ClientSession(connector=self._session_connector) as session:
-            session.headers['authorization'] = self._secret_token
-
-            async with session.post(url, headers=headers, json=payload) as response:
+        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+            async with session.post(url, headers=self._discord_headers, json=payload) as response:
                 if response.status == 200:
                     try:
                         return DiscordMessage(await response.json())
@@ -369,9 +359,6 @@ class Client:
             if reply_message.guild_id:
                 payload["message_reference"]["guild_id"] = reply_message.guild_id
             payload["allowed_mentions"] = {"parse": ["users", "roles", "everyone"], "replied_user": replied_user}
-        headers = {
-            "authorization": self._secret_token
-        }
 
         if file_path:
             attachments_json_data = await self._create_attachment(channel_id=chat_id, file_path=file_path)
@@ -383,10 +370,8 @@ class Client:
             }]
 
         _log.debug(f"payload send_message: {payload}")
-        async with aiohttp.ClientSession(connector=self._session_connector) as session:
-            session.headers['authorization'] = self._secret_token
-
-            async with session.post(url, headers=headers, json=payload) as response:
+        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+            async with session.post(url, headers=self._discord_headers, json=payload) as response:
                 if response.status == 200:
                     response_text = None
                     try:
@@ -403,14 +388,9 @@ class Client:
     async def send_typing(self, chat_id) -> int:
         url = f"https://discord.com/api/v9/channels/{chat_id}/typing"
         payload = ""
-        headers = {
-            "authorization": self._secret_token
-        }
 
-        async with aiohttp.ClientSession(connector=self._session_connector) as session:
-            session.headers['authorization'] = self._secret_token
-
-            async with session.post(url, headers=headers, data=payload) as response:
+        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+            async with session.post(url, headers=self._discord_headers, data=payload) as response:
                 if response.status == 204:
                     return response.status
                 else:
@@ -420,13 +400,8 @@ class Client:
     async def delete_message(self, chat_id, message_id):
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}"
 
-        headers = {
-            "authorization": self._secret_token
-        }
-        async with aiohttp.ClientSession(connector=self._session_connector) as session:
-            session.headers['authorization'] = self._secret_token
-
-            async with session.delete(url, headers=headers) as response:
+        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+            async with session.delete(url, headers=self._discord_headers) as response:
                 if response.status == 204:
                     return
                 else:
@@ -440,13 +415,8 @@ class Client:
             emoji_str = f"{reaction.name}:{reaction.id}/0"  # tatar:769298493922607187/0
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}/reactions/{emoji_str}/@me?location=Message Reaction Picker&type=0"
 
-        headers = {
-            "authorization": self._secret_token
-        }
-        async with aiohttp.ClientSession(connector=self._session_connector) as session:
-            session.headers['authorization'] = self._secret_token
-
-            async with session.put(url, headers=headers) as response:
+        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+            async with session.put(url, headers=self._discord_headers) as response:
                 if response.status == 204:
                     return
                 else:
@@ -460,13 +430,8 @@ class Client:
             emoji_str = f"{reaction.name}:{reaction.id}/0"  # tatar:769298493922607187/0
         url = f"https://discord.com/api/v9/channels/{chat_id}/messages/{message_id}/reactions/{emoji_str}/@me?location=Message Inline Button&burst=false"
 
-        headers = {
-            "authorization": self._secret_token
-        }
-        async with aiohttp.ClientSession(connector=self._session_connector) as session:
-            session.headers['authorization'] = self._secret_token
-
-            async with session.delete(url, headers=headers) as response:
+        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+            async with session.delete(url, headers=self._discord_headers) as response:
                 if response.status == 204:
                     return
                 else:
@@ -480,13 +445,8 @@ class Client:
 
         payload = ""
 
-        headers = {
-            "authorization": self._secret_token
-        }
-        async with aiohttp.ClientSession(connector=self._session_connector) as session:
-            session.headers['authorization'] = self._secret_token
-
-            async with session.get(url, data=payload, headers=headers, params=querystring) as response:
+        async with aiohttp.ClientSession(connector=self._session_connector, headers=self._discord_headers) as session:
+            async with session.get(url, data=payload, headers=self._discord_headers, params=querystring) as response:
                 if response.status == 200:
                     response_text = None
                     try:
