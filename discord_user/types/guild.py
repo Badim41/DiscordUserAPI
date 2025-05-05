@@ -21,7 +21,7 @@ class Guild:
         self.afk_channel_id = properties['afk_channel_id']
         self.description = properties['description']
         self.premium_tier = properties['premium_tier']  # Уровень буста Nitro
-        self.clan = properties['clan']
+        self.clan = properties.get('clan')
         self.owner_id = properties['owner_id']
         self.system_channel_id = properties['system_channel_id']
         self.safety_alerts_channel_id = properties['safety_alerts_channel_id']
